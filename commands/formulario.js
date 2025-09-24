@@ -40,10 +40,10 @@ const questions = [
     'Quando é permitido atirar em uma perseguição?',
     'Como deve ser a conduta de abordagem?',
     'Qual o máximo de artigos que uma pessoa pode ser presa?',
-    'Você pode abordar trabalhador? Se sim, quando?',
+    'Você pode abordar trabalhador? se sim, quando?',
     'Quando deve ser usado o taser?',
     'Como deve ser o nome à paisana e o nome em patrulha?',
-    'Pode prender morto? Se sim, quando?'
+    'Pode prender morto? se sim, quando?'
 ];
 
 // Envia o painel inicial com botão para realizar formulário
@@ -69,100 +69,99 @@ export async function enviarPainelFormulario(client) {
 // Handler principal do formulário
 export async function formularioHandler(client, interaction) {
     try {
-        if (interaction.isButton()) {
-            // Inicia o formulário
-            if (interaction.customId === 'start_form') {
-                // Cria canal privado na categoria
-                const guild = interaction.guild;
-                const userId = interaction.user.id;
-
-                const privateChannel = await guild.channels.create({
-                    name: `form-${interaction.user.username}`,
-                    type: 0, // GUILD_TEXT
-                    parent: FORM_CATEGORY,
-                    permissionOverwrites: [
-                        { id: guild.roles.everyone, deny: [PermissionsBitField.Flags.ViewChannel] },
-                        { id: userId, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
-                        { id: RECRUITER_ROLE, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
-                    ]
-                });
-
-                await interaction.reply({ content: `Canal criado: ${privateChannel}`, ephemeral: true });
-
-                const responses = [];
-
-                // Função recursiva para perguntas
-                const askQuestion = async (i) => {
-                    if (i >= questions.length) {
-                        // Finaliza o formulário
-                        const embed = new EmbedBuilder()
-                            .setTitle(`📋 Formulário de ${interaction.user.tag}`)
-                            .setColor(0xFFD700);
-
-                        questions.forEach((q, idx) => {
-                            embed.addFields({ name: q, value: responses[idx], inline: false });
-                        });
-
-                        // Canal de respostas
-                        const respChannel = await client.channels.fetch(RESPONSES_CHANNEL);
-
-                        const row = new ActionRowBuilder().addComponents(
-                            new ButtonBuilder()
-                                .setCustomId(`approve_${userId}`)
-                                .setLabel('Aprovar')
-                                .setStyle(ButtonStyle.Success),
-                            new ButtonBuilder()
-                                .setCustomId(`reject_${userId}`)
-                                .setLabel('Reprovar')
-                                .setStyle(ButtonStyle.Danger)
-                        );
-
-                        const msg = await respChannel.send({ embeds: [embed], components: [row] });
-
-                        await privateChannel.send('Formulário finalizado! Aguarde avaliação.');
-
-                        return;
-                    }
-
-                    const modal = new ModalBuilder()
-                        .setCustomId(`form_question_${i}`)
-                        .setTitle(questions[i]);
-
-                    modal.addComponents(
-                        new ActionRowBuilder().addComponents(
-                            new TextInputBuilder()
-                                .setCustomId('answer')
-                                .setLabel(questions[i])
-                                .setStyle(TextInputStyle.Paragraph)
-                                .setRequired(true)
-                        )
-                    );
-
-                    await interaction.user.send({ content: 'Preencha o formulário:', components: [], embeds: [] }).catch(()=>{});
-                    await interaction.showModal(modal);
-                };
-
-                return askQuestion(0);
-            }
-        }
-
-        if (interaction.type === InteractionType.ModalSubmit) {
-            const i = parseInt(interaction.customId.split('_').pop());
-            const answer = interaction.fields.getTextInputValue('answer');
+        // INÍCIO DO FORMULÁRIO
+        if (interaction.isButton() && interaction.customId === 'start_form') {
+            const guild = interaction.guild;
             const userId = interaction.user.id;
 
-            // Salva a resposta
+            // Cria canal privado na categoria
+            const privateChannel = await guild.channels.create({
+                name: `form-${interaction.user.username}`,
+                type: 0, // GUILD_TEXT
+                parent: FORM_CATEGORY,
+                permissionOverwrites: [
+                    { id: guild.roles.everyone, deny: [PermissionsBitField.Flags.ViewChannel] },
+                    { id: userId, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+                    { id: RECRUITER_ROLE, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
+                ]
+            });
+
+            await interaction.reply({ content: `Canal criado: ${privateChannel}`, ephemeral: true });
+
+            // Armazena respostas
+            const responses = [];
+
+            // Função recursiva para enviar perguntas
+            const askQuestion = async (i) => {
+                if (i >= questions.length) {
+                    // Formulário finalizado
+                    const embed = new EmbedBuilder()
+                        .setTitle(`📋 Formulário de ${interaction.user.tag}`)
+                        .setColor(0xFFD700);
+
+                    questions.forEach((q, idx) => {
+                        embed.addFields({ name: q, value: responses[idx] || 'Não respondido', inline: false });
+                    });
+
+                    const respChannel = await client.channels.fetch(RESPONSES_CHANNEL);
+                    const row = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder()
+                            .setCustomId(`approve_${userId}`)
+                            .setLabel('Aprovar')
+                            .setStyle(ButtonStyle.Success),
+                        new ButtonBuilder()
+                            .setCustomId(`reject_${userId}`)
+                            .setLabel('Reprovar')
+                            .setStyle(ButtonStyle.Danger)
+                    );
+
+                    await respChannel.send({ embeds: [embed], components: [row] });
+                    await privateChannel.send('Formulário finalizado! Aguarde avaliação.');
+                    return;
+                }
+
+                // Envia a pergunta como embed no canal privado
+                const questionEmbed = new EmbedBuilder()
+                    .setTitle(`Pergunta ${i + 1}`)
+                    .setDescription(questions[i])
+                    .setColor(0xFFD700);
+
+                const modal = new ModalBuilder()
+                    .setCustomId(`form_question_${i}`)
+                    .setTitle(`Pergunta ${i + 1}`);
+
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(
+                        new TextInputBuilder()
+                            .setCustomId('answer')
+                            .setLabel(questions[i])
+                            .setStyle(TextInputStyle.Paragraph)
+                            .setRequired(true)
+                    )
+                );
+
+                await privateChannel.send({ embeds: [questionEmbed] });
+                await interaction.showModal(modal);
+            };
+
+            return askQuestion(0);
+        }
+
+        // MODAL SUBMIT - resposta das perguntas
+        if (interaction.type === InteractionType.ModalSubmit && interaction.customId.startsWith('form_question_')) {
+            const i = parseInt(interaction.customId.split('_').pop());
+            const answer = interaction.fields.getTextInputValue('answer');
             if (!interaction.responses) interaction.responses = [];
             interaction.responses[i] = answer;
 
-            // Avança para próxima pergunta
+            // Próxima pergunta ou finalização
             const nextIndex = i + 1;
             if (nextIndex < questions.length) {
-                const nextModal = new ModalBuilder()
+                const modal = new ModalBuilder()
                     .setCustomId(`form_question_${nextIndex}`)
-                    .setTitle(questions[nextIndex]);
+                    .setTitle(`Pergunta ${nextIndex + 1}`);
 
-                nextModal.addComponents(
+                modal.addComponents(
                     new ActionRowBuilder().addComponents(
                         new TextInputBuilder()
                             .setCustomId('answer')
@@ -172,7 +171,7 @@ export async function formularioHandler(client, interaction) {
                     )
                 );
 
-                await interaction.showModal(nextModal);
+                await interaction.showModal(modal);
             } else {
                 // Formulário finalizado
                 const embed = new EmbedBuilder()
@@ -186,11 +185,11 @@ export async function formularioHandler(client, interaction) {
                 const respChannel = await client.channels.fetch(RESPONSES_CHANNEL);
                 const row = new ActionRowBuilder().addComponents(
                     new ButtonBuilder()
-                        .setCustomId(`approve_${userId}`)
+                        .setCustomId(`approve_${interaction.user.id}`)
                         .setLabel('Aprovar')
                         .setStyle(ButtonStyle.Success),
                     new ButtonBuilder()
-                        .setCustomId(`reject_${userId}`)
+                        .setCustomId(`reject_${interaction.user.id}`)
                         .setLabel('Reprovar')
                         .setStyle(ButtonStyle.Danger)
                 );
@@ -200,18 +199,17 @@ export async function formularioHandler(client, interaction) {
             }
         }
 
-        if (interaction.isButton()) {
+        // BOTÕES de Aprovar/Reprovar
+        if (interaction.isButton() && (interaction.customId.startsWith('approve_') || interaction.customId.startsWith('reject_'))) {
             const [action, targetUserId] = interaction.customId.split('_');
-            if (!interaction.member.roles.cache.has(RECRUITER_ROLE)) {
-                return interaction.reply({ content: 'Você não tem permissão para essa ação.', ephemeral: true });
-            }
+            if (!interaction.member.roles.cache.has(RECRUITER_ROLE))
+                return interaction.reply({ content: 'Você não tem permissão.', ephemeral: true });
 
             const guild = interaction.guild;
-            const member = await guild.members.fetch(targetUserId).catch(()=>null);
+            const member = await guild.members.fetch(targetUserId).catch(() => null);
             if (!member) return interaction.reply({ content: 'Membro não encontrado.', ephemeral: true });
 
             if (action === 'approve') {
-                // Adiciona cargos
                 for (const roleId of APPROVED_ROLES) {
                     await member.roles.add(roleId).catch(console.error);
                 }
@@ -224,24 +222,40 @@ export async function formularioHandler(client, interaction) {
                 const finalChannel = await client.channels.fetch(FINAL_CHANNEL);
                 await finalChannel.send({ embeds: [embed] });
                 await interaction.reply({ content: 'Usuário aprovado com sucesso!', ephemeral: true });
+
             } else if (action === 'reject') {
-                // Pede motivo
-                await interaction.reply({ content: 'Envie o motivo da reprovação:', ephemeral: true });
+                // Modal para motivo da reprovação
+                const modal = new ModalBuilder()
+                    .setCustomId(`reject_reason_${targetUserId}`)
+                    .setTitle('Motivo da Reprovação');
 
-                const filter = m => m.author.id === interaction.user.id;
-                const collector = interaction.channel.createMessageCollector({ filter, max: 1, time: 60000 });
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(
+                        new TextInputBuilder()
+                            .setCustomId('reason')
+                            .setLabel('Motivo da reprovação')
+                            .setStyle(TextInputStyle.Paragraph)
+                            .setRequired(true)
+                    )
+                );
 
-                collector.on('collect', async m => {
-                    const embed = new EmbedBuilder()
-                        .setTitle('❌ Formulário reprovado')
-                        .setDescription(`Usuário: <@${targetUserId}>\nMotivo: ${m.content}`)
-                        .setColor(0xFF0000);
-
-                    const finalChannel = await client.channels.fetch(FINAL_CHANNEL);
-                    await finalChannel.send({ embeds: [embed] });
-                    await interaction.followUp({ content: 'Usuário reprovado com sucesso!', ephemeral: true });
-                });
+                await interaction.showModal(modal);
             }
+        }
+
+        // Modal submit do motivo de reprovação
+        if (interaction.type === InteractionType.ModalSubmit && interaction.customId.startsWith('reject_reason_')) {
+            const targetUserId = interaction.customId.split('_').pop();
+            const reason = interaction.fields.getTextInputValue('reason');
+
+            const embed = new EmbedBuilder()
+                .setTitle('❌ Formulário reprovado')
+                .setDescription(`Usuário: <@${targetUserId}>\nMotivo: ${reason}`)
+                .setColor(0xFF0000);
+
+            const finalChannel = await interaction.client.channels.fetch(FINAL_CHANNEL);
+            await finalChannel.send({ embeds: [embed] });
+            await interaction.reply({ content: 'Usuário reprovado com sucesso!', ephemeral: true });
         }
 
     } catch (err) {
