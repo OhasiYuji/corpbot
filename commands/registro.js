@@ -13,9 +13,10 @@ import { registrarUsuario } from '../utils/sheets.js';
 
 const PANEL_CHANNEL_ID = '1396852912709308426';
 const USER_INFO_CHANNEL_ID = '1390033258821062760';
-const ICON_EMOJI = '<:iconepf:1399436333071728730>'; // substitua pelo seu ícone da PF
+const ICON_EMOJI = '<:iconepf:1399436333071728730>'; // ícone da PF
 
 export async function registroHandler(client, interaction) {
+    // Abrir modal
     if (interaction.isButton() && interaction.customId === 'open_modal') {
         const modal = new ModalBuilder()
             .setCustomId('registration_modal')
@@ -48,19 +49,20 @@ export async function registroHandler(client, interaction) {
         await interaction.showModal(modal);
     }
 
+    // Envio do registro
     if (interaction.type === InteractionType.ModalSubmit && interaction.customId === 'registration_modal') {
         const nome = interaction.fields.getTextInputValue('nome');
         const idJogo = interaction.fields.getTextInputValue('id_jogo');
         const login = interaction.fields.getTextInputValue('login');
 
-        // Atualiza apelido
+        // Atualiza apelido do usuário
         try {
             await interaction.member.setNickname(`DPF » ${nome} (${idJogo})`);
         } catch (err) {
             console.error('Erro ao mudar apelido:', err);
         }
 
-        // Embed bonito
+        // Cria embed com ícones da PF
         const embed = new EmbedBuilder()
             .setTitle(`${ICON_EMOJI} NOVO REGISTRO`)
             .setColor(0xFFD700) // dourado
@@ -72,10 +74,14 @@ export async function registroHandler(client, interaction) {
             )
             .setFooter({ text: 'DPF - DRP' });
 
+        // Envia embed para o canal de informações
         const infoChannel = await client.channels.fetch(USER_INFO_CHANNEL_ID);
         if (infoChannel) await infoChannel.send({ embeds: [embed] });
 
+        // Registra no Google Sheets
         await registrarUsuario(interaction.user.id, nome, idJogo, login);
+
+        // Resposta ephemer
         await interaction.reply({ content: 'Registro realizado com sucesso!', ephemeral: true });
     }
 }
