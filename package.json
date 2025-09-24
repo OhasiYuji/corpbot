@@ -1,0 +1,22 @@
+{
+  "name": "corpbot",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "discord.js": "^14.22.1",
+    "dotenv": "^17.2.2",
+    "google-spreadsheet": "^5.0.2",
+    "googleapis": "^160.0.0",
+    "luxon": "^3.7.2",
+    "node-cron": "^4.2.1"
+  }
+}
