@@ -5,7 +5,7 @@ import { formatTimeBR, formatTimestampBR } from '../utils/format.js';
 
 const CATEGORY_VOICE_ID = '1390033257910894599';
 const LOG_CHANNEL_ID = '1390161145037590549';
-const ICON_EMOJI = '<:iconepf:YOUR_ICON_ID>'; // substitua pelo seu ícone da PF
+const ICON_EMOJI = '<:iconepf:1399436333071728730>'; // substitua pelo seu ícone da PF
 
 const usersInPoint = new Map(); // usuário => hora de entrada
 

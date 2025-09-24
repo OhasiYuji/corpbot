@@ -13,7 +13,7 @@ import { registrarUsuario } from '../utils/sheets.js';
 
 const PANEL_CHANNEL_ID = '1396852912709308426';
 const USER_INFO_CHANNEL_ID = '1390033258821062760';
-const ICON_EMOJI = '<:iconepf:YOUR_ICON_ID>'; // substitua pelo seu ícone da PF
+const ICON_EMOJI = '<:iconepf:1399436333071728730>'; // substitua pelo seu ícone da PF
 
 export async function registroHandler(client, interaction) {
     if (interaction.isButton() && interaction.customId === 'open_modal') {
@@ -25,7 +25,7 @@ export async function registroHandler(client, interaction) {
             new ActionRowBuilder().addComponents(
                 new TextInputBuilder()
                     .setCustomId('nome')
-                    .setLabel('Nome completo')
+                    .setLabel('Nickname')
                     .setStyle(TextInputStyle.Short)
                     .setRequired(true)
             ),
@@ -65,9 +65,9 @@ export async function registroHandler(client, interaction) {
             .setTitle(`${ICON_EMOJI} Registro Concluído`)
             .setColor(0xFFD700) // dourado
             .addFields(
-                { name: 'Nome', value: nome, inline: true },
-                { name: 'ID no Jogo', value: idJogo, inline: true },
-                { name: 'Login', value: login, inline: true }
+                { name: 'Nome', value: nome, inline: false },
+                { name: 'ID no Jogo', value: idJogo, inline: false },
+                { name: 'Login', value: login, inline: false }
             )
             .setFooter({ text: 'DPF - DRP' });
 
