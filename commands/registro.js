@@ -62,12 +62,13 @@ export async function registroHandler(client, interaction) {
 
         // Embed bonito
         const embed = new EmbedBuilder()
-            .setTitle(`${ICON_EMOJI} Registro Concluído`)
+            .setTitle(`${ICON_EMOJI} NOVO REGISTRO`)
             .setColor(0xFFD700) // dourado
             .addFields(
-                { name: 'Nome', value: nome, inline: false },
-                { name: 'ID no Jogo', value: idJogo, inline: false },
-                { name: 'Login', value: login, inline: false }
+                { name: `${ICON_EMOJI} NOME`, value: `<@${interaction.user.id}>`, inline: true },
+                { name: `${ICON_EMOJI} LOGIN`, value: login, inline: true },
+                { name: `${ICON_EMOJI} ID`, value: idJogo, inline: true },
+                { name: `${ICON_EMOJI} TAG`, value: 'DPF - DRP', inline: true }
             )
             .setFooter({ text: 'DPF - DRP' });
 
