@@ -1,7 +1,7 @@
 // index.js
 import 'dotenv/config';
-import { Client, GatewayIntentBits, Partials, InteractionType } from 'discord.js';
-import { registroHandler, enviarPainelRegistro } from './commands/registro.js';
+import { Client, GatewayIntentBits, Partials } from 'discord.js';
+import { registroHandler } from './commands/registro.js';
 import { voiceStateHandler } from './commands/batePonto.js';
 import { formularioHandler, enviarPainelFormulario } from './commands/formulario.js';
 
@@ -20,29 +20,32 @@ const client = new Client({
 client.once('ready', async () => {
     console.log(`Bot logado como ${client.user.tag}`);
 
-    try {
-        // Enviar painel de registro
-        await enviarPainelRegistro(client);
-
-        // Enviar painel de formulário
-        await enviarPainelFormulario(client);
-    } catch (err) {
-        console.error('Erro ao enviar painéis:', err);
+    // Enviar painel de registro
+    const registroChannelId = '1396852912709308426';
+    const registroChannel = await client.channels.fetch(registroChannelId);
+    if (registroChannel) {
+        await registroHandler(client, {
+            isButton: () => false, // apenas para enviar botão inicial
+            showModal: async () => {}
+        });
     }
+
+    // Enviar painel de formulário
+    await enviarPainelFormulario(client);
+
+    console.log('Painéis enviados!');
 });
 
 // Evento: interação (botão e modal)
 client.on('interactionCreate', async (interaction) => {
     try {
-        if (interaction.isButton() || interaction.type === InteractionType.ModalSubmit) {
-            // Registro
-            await registroHandler(client, interaction);
+        // Registro
+        await registroHandler(client, interaction);
 
-            // Formulário
-            await formularioHandler(client, interaction);
-        }
+        // Formulário
+        await formularioHandler(client, interaction);
     } catch (err) {
-        console.error('Erro em interação:', err);
+        console.error('Erro ao processar interação:', err);
     }
 });
 
