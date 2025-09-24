@@ -1,198 +1,164 @@
-// commands/formulario.js
 import {
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle,
-    ChannelType,
     EmbedBuilder,
-    PermissionFlagsBits,
-    ModalBuilder,
-    TextInputBuilder,
-    TextInputStyle,
-    InteractionType
+    PermissionsBitField,
 } from 'discord.js';
 
-// IDs fornecidos
-const PANEL_CHANNEL_ID = '1390033258309357577';
-const CATEGORY_FORM_ID = '1390033258309357576';
-const REVIEW_CHANNEL_ID = '1390033258477125632';
-const RESULT_CHANNEL_ID = '1390033258309357578';
-const RECRUITER_ROLE_ID = '1390033256640024594';
-const TAG_CHANNEL_ID = '1396852912709308426';
-const SOLICITAR_TAG_ID = '1399875114660532244';
-const TUTORIAL_CHANNEL_ID = '1390033257533542410';
+const FORM_CHANNEL_ID = '1390033258309357577';
+const FORM_CATEGORY_ID = '1390033258309357576';
+const RESPONSE_CHANNEL_ID = '1390033258477125632';
+const APPROVED_CHANNEL = '1390033258309357578';
+const EDITOR_ROLE_ID = '1390033256640024594';
+const ICON_EMOJI = '<:iconepf:1399436333071728730>';
 
-// Cargos a dar no aprovado
-const ROLE_IDS_ON_APPROVE = [
-    '1390033256652476596',
-    '1390033256652476595',
-    '1390033256652476594',
-    '1390033256652476592'
+const QUESTIONS = [
+    '1º • Qual sua idade?',
+    '2º • Quanto tempo de rp?',
+    '3º • Qual sua intenção em entrar na policia federal?',
+    '4º • O que é RP e ANTI-RP?',
+    '5º • O que é RDM e VDM?',
+    '6º • O que é ter amor a vida?',
+    '7º • O que é car jacking?',
+    '8º • O que é ninja jacking?',
+    '9º • O que é DarkRP?',
+    '10º • O que são áreas verdes, neutras e vermelhas?',
+    '11º • Qual patente mínima nececssária para iniciar uma patrulha?',
+    '12º • Quantos policiais são necessários para iniciar a patrulha?',
+    '13º • Quando é permitido atirar em uma perseguição?',
+    '14º • Como deve ser a conduta de abordagem?',
+    '15º • Qual o máximo de artigos que uma pessoa pode ser presa?',
+    '16º • Você pode abordar trabalhador? se sim, quando?',
+    '17º • Quando deve ser usado o taser?',
+    '18º • Como deve ser o nome apaisana e o nome em patrulha?',
+    '19º • Pode prender morto? se sim, quando?'
 ];
 
-// Perguntas do formulário
-const perguntas = [
-    "Qual sua idade?",
-    "Quanto tempo de RP?",
-    "Qual sua intenção em entrar na polícia federal?",
-    "O que é RP e ANTI-RP?",
-    "O que é RDM e VDM?",
-    "O que é ter amor à vida?",
-    "O que é car jacking?",
-    "O que é ninja jacking?",
-    "O que é DarkRP?",
-    "O que são áreas verdes, neutras e vermelhas?",
-    "Qual patente mínima necessária para iniciar uma patrulha?",
-    "Quantos policiais são necessários para iniciar a patrulha?",
-    "Quando é permitido atirar em uma perseguição?",
-    "Como deve ser a conduta de abordagem?",
-    "Qual o máximo de artigos que uma pessoa pode ser presa?",
-    "Você pode abordar trabalhador? Se sim, quando?",
-    "Quando deve ser usado o taser?",
-    "Como deve ser o nome apaisana e o nome em patrulha?",
-    "Pode prender morto? Se sim, quando?"
-];
-
-// Armazenar progresso
-const respostasPendentes = new Map(); // userId -> { canalId, respostas[], idxPergunta }
-
-export async function enviarPainelFormulario(client) {
-    const painelChannel = await client.channels.fetch(PANEL_CHANNEL_ID);
-    if (!painelChannel) return;
-
-    const embed = new EmbedBuilder()
-        .setTitle("📋 Painel de Formulário")
-        .setDescription("Clique no botão abaixo para iniciar seu formulário de conscrito.")
-        .setColor(0x00AEFF);
-
-    const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-            .setCustomId("iniciar_formulario")
-            .setLabel("Realizar Formulário")
-            .setStyle(ButtonStyle.Primary)
-    );
-
-    await painelChannel.send({ embeds: [embed], components: [row] });
-}
+const userForms = new Map(); // track users filling form
 
 export async function formularioHandler(client, interaction) {
-    // Clique no botão "realizar formulário"
-    if (interaction.isButton() && interaction.customId === "iniciar_formulario") {
+    // Botão inicial "Realizar Formulário"
+    if (interaction.isButton() && interaction.customId === 'start_form') {
         const guild = interaction.guild;
 
-        // cria canal privado
-        const privateChannel = await guild.channels.create({
-            name: `form-${interaction.user.username}`,
-            type: ChannelType.GuildText,
-            parent: CATEGORY_FORM_ID,
+        // Criar canal privado
+        const channel = await guild.channels.create({
+            name: `formulario-${interaction.user.username}`,
+            type: 0, // GUILD_TEXT
+            parent: FORM_CATEGORY_ID,
             permissionOverwrites: [
-                { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-                { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }
-            ]
+                {
+                    id: interaction.user.id,
+                    allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages],
+                },
+                {
+                    id: guild.roles.everyone,
+                    deny: [PermissionsBitField.Flags.ViewChannel],
+                },
+            ],
         });
 
-        respostasPendentes.set(interaction.user.id, {
-            canalId: privateChannel.id,
-            respostas: [],
-            idxPergunta: 0
-        });
+        userForms.set(interaction.user.id, { channel, answers: [], questionIndex: 0 });
 
-        await privateChannel.send(`Olá ${interaction.user}, vamos começar o formulário!`);
-        await privateChannel.send(`**${perguntas[0]}**`);
-
-        await interaction.reply({ content: "✅ Seu canal privado foi criado para preencher o formulário.", ephemeral: true });
+        await channel.send(`Olá <@${interaction.user.id}>! Vamos começar o formulário.`);
+        await channel.send(QUESTIONS[0]);
+        await interaction.reply({ content: `Canal criado para o formulário: ${channel}`, ephemeral: true });
     }
 
-    // Mensagens nas perguntas
-    if (interaction.isMessage() && respostasPendentes.has(interaction.author.id)) {
-        const progresso = respostasPendentes.get(interaction.author.id);
-        if (interaction.channel.id !== progresso.canalId) return;
+    // Receber mensagens no canal do formulário
+    if (interaction.isMessage()) {
+        const formData = userForms.get(interaction.user.id);
+        if (!formData || interaction.channel.id !== formData.channel.id) return;
 
-        progresso.respostas.push(interaction.content);
-        progresso.idxPergunta++;
+        // Salvar resposta
+        formData.answers.push(interaction.content);
+        formData.questionIndex++;
 
-        if (progresso.idxPergunta < perguntas.length) {
-            await interaction.channel.send(`**${perguntas[progresso.idxPergunta]}**`);
+        if (formData.questionIndex < QUESTIONS.length) {
+            // Próxima pergunta
+            await interaction.channel.send(QUESTIONS[formData.questionIndex]);
         } else {
-            // acabou
-            const reviewChannel = await client.channels.fetch(REVIEW_CHANNEL_ID);
-
+            // Finalizar formulário
             const embed = new EmbedBuilder()
-                .setTitle("📋 Novo Formulário Recebido")
+                .setTitle(`${ICON_EMOJI} Novo Formulário`)
                 .setColor(0xFFD700)
-                .setAuthor({ name: interaction.author.tag, iconURL: interaction.author.displayAvatarURL() });
+                .setAuthor({ name: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() });
 
-            perguntas.forEach((pergunta, idx) => {
-                embed.addFields({ name: pergunta, value: progresso.respostas[idx] || "Não respondeu", inline: false });
+            QUESTIONS.forEach((q, i) => {
+                embed.addFields({ name: q, value: formData.answers[i], inline: false });
             });
 
             const row = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId(`aprovar_${interaction.author.id}`).setLabel("Aprovar").setStyle(ButtonStyle.Success),
-                new ButtonBuilder().setCustomId(`reprovar_${interaction.author.id}`).setLabel("Reprovar").setStyle(ButtonStyle.Danger)
+                new ButtonBuilder()
+                    .setCustomId(`approve_${interaction.user.id}`)
+                    .setLabel('Aprovar')
+                    .setStyle(ButtonStyle.Success),
+                new ButtonBuilder()
+                    .setCustomId(`reject_${interaction.user.id}`)
+                    .setLabel('Reprovar')
+                    .setStyle(ButtonStyle.Danger)
             );
 
-            await reviewChannel.send({ embeds: [embed], components: [row] });
-            await interaction.channel.send("✅ Formulário finalizado e enviado para análise!");
-            respostasPendentes.delete(interaction.author.id);
+            const responseChannel = await client.channels.fetch(RESPONSE_CHANNEL_ID);
+            if (responseChannel) await responseChannel.send({ embeds: [embed], components: [row] });
+
+            await interaction.channel.send('Formulário finalizado! Aguarde avaliação.');
+            userForms.delete(interaction.user.id);
         }
     }
 
-    // Aprovar / Reprovar
+    // Aprovação/Reprovação
     if (interaction.isButton()) {
-        const [acao, targetId] = interaction.customId.split("_");
-        if (!["aprovar", "reprovar"].includes(acao)) return;
+        const [action, userId] = interaction.customId.split('_');
+        const member = await interaction.guild.members.fetch(userId);
 
-        if (!interaction.member.roles.cache.has(RECRUITER_ROLE_ID)) {
-            return interaction.reply({ content: "❌ Você não tem permissão para aprovar/reprovar.", ephemeral: true });
-        }
+        if (!interaction.member.roles.cache.has(EDITOR_ROLE_ID))
+            return interaction.reply({ content: 'Você não tem permissão!', ephemeral: true });
 
-        const user = await interaction.guild.members.fetch(targetId);
-        const resultChannel = await client.channels.fetch(RESULT_CHANNEL_ID);
+        if (action === 'approve') {
+            // Adicionar cargos
+            await member.roles.add([
+                '1390033256652476596',
+                '1390033256652476595',
+                '1390033256652476594',
+                '1390033256652476592'
+            ]);
 
-        if (acao === "aprovar") {
-            for (const roleId of ROLE_IDS_ON_APPROVE) {
-                await user.roles.add(roleId).catch(() => {});
-            }
-
+            // Embed aprovado
             const embed = new EmbedBuilder()
-                .setTitle("✅ Candidato Aprovado")
-                .setDescription(`${user} foi aprovado! Agora deve:\n- Se registrar em <#${TAG_CHANNEL_ID}>\n- Solicitar a tag em <#${SOLICITAR_TAG_ID}>\n- Ler o tutorial em <#${TUTORIAL_CHANNEL_ID}>`)
-                .setColor(0x00FF00);
+                .setTitle(`${ICON_EMOJI} Formulário Aprovado`)
+                .setColor(0x00FF00)
+                .setDescription(`Parabéns <@${userId}>! Você foi aprovado. Pode prosseguir com o registro.`);
 
-            await resultChannel.send({ embeds: [embed] });
-            await interaction.reply({ content: "✅ Aprovado com sucesso!", ephemeral: true });
+            const aprovadoChannel = await interaction.guild.channels.fetch(APPROVED_CHANNEL);
+            if (aprovadoChannel) await aprovadoChannel.send({ embeds: [embed] });
+
+            await interaction.update({ content: 'Formulário aprovado!', components: [] });
         }
 
-        if (acao === "reprovar") {
-            const modal = new ModalBuilder()
-                .setCustomId(`modal_reprovar_${targetId}`)
-                .setTitle("Motivo da Reprovação")
-                .addComponents(
-                    new ActionRowBuilder().addComponents(
-                        new TextInputBuilder()
-                            .setCustomId("motivo")
-                            .setLabel("Escreva o motivo")
-                            .setStyle(TextInputStyle.Paragraph)
-                            .setRequired(true)
-                    )
-                );
-            await interaction.showModal(modal);
+        if (action === 'reject') {
+            // Solicitar motivo
+            await interaction.reply({ content: 'Digite o motivo da reprovação:', ephemeral: true });
+
+            const filter = m => m.author.id === interaction.user.id;
+            const collector = interaction.channel.createMessageCollector({ filter, max: 1, time: 60000 });
+
+            collector.on('collect', async msg => {
+                const motivo = msg.content;
+
+                const embed = new EmbedBuilder()
+                    .setTitle(`${ICON_EMOJI} Formulário Reprovado`)
+                    .setColor(0xFF0000)
+                    .setDescription(`O usuário <@${userId}> foi reprovado.`)
+                    .addFields({ name: 'Motivo', value: motivo });
+
+                const aprovadoChannel = await interaction.guild.channels.fetch(APPROVED_CHANNEL);
+                if (aprovadoChannel) await aprovadoChannel.send({ embeds: [embed] });
+
+                await interaction.followUp({ content: 'Formulário reprovado e motivo enviado!', ephemeral: true });
+                await interaction.message.delete();
+            });
         }
-    }
-
-    // Modal de reprovação
-    if (interaction.type === InteractionType.ModalSubmit && interaction.customId.startsWith("modal_reprovar_")) {
-        const targetId = interaction.customId.split("_")[2];
-        const motivo = interaction.fields.getTextInputValue("motivo");
-        const user = await interaction.guild.members.fetch(targetId);
-        const resultChannel = await client.channels.fetch(RESULT_CHANNEL_ID);
-
-        const embed = new EmbedBuilder()
-            .setTitle("❌ Candidato Reprovado")
-            .setDescription(`${user} foi reprovado.\n\n**Motivo:** ${motivo}`)
-            .setColor(0xFF0000);
-
-        await resultChannel.send({ embeds: [embed] });
-        await interaction.reply({ content: "❌ Reprovado e motivo registrado!", ephemeral: true });
     }
 }
