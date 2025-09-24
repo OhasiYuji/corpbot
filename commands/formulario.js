@@ -158,7 +158,7 @@ export async function formularioHandler(client, interaction) {
 
                 const approvedChannel = await client.channels.fetch(APPROVED_CHANNEL_ID);
                 const embedApproved = new EmbedBuilder()
-                    .setTitle(`${ICON_PF} Formulário Aprovado ✅`)
+                    .setTitle(`${ICON_PF} Formulário Aprovado`)
                     .setDescription(`
                 Olá ${member}, parabéns! Você foi aprovado no formulário.
 
@@ -170,7 +170,8 @@ export async function formularioHandler(client, interaction) {
                     .setColor(0x00FF00)
                     .setFooter({ text: 'Polícia Federal - DRP' });
 
-                await approvedChannel.send({ embeds: [embedApproved] });
+                // Envia a menção e o embed
+                await approvedChannel.send({ content: `${member}`, embeds: [embedApproved] });
             }
 
             // Reprovar
