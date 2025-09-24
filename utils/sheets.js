@@ -1,10 +1,11 @@
 // utils/sheets.js
 import 'dotenv/config';
 import { google } from 'googleapis';
-import fs from 'fs';
 
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
-const CREDENTIALS = JSON.parse(fs.readFileSync(process.env.GOOGLE_CREDENTIALS_PATH));
+
+// Credenciais direto da variável de ambiente
+const CREDENTIALS = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
 
 const auth = new google.auth.GoogleAuth({
     credentials: CREDENTIALS,
@@ -17,10 +18,10 @@ export async function registrarUsuario(userId, nome, idJogo, login) {
     try {
         await sheets.spreadsheets.values.append({
             spreadsheetId: SPREADSHEET_ID,
-            range: 'usuarios!A:D',
+            range: 'usuarios!A:F',
             valueInputOption: 'RAW',
             requestBody: {
-                values: [[userId, nome, idJogo, login, 0, 0]] // Sexta coluna é horas acumuladas
+                values: [[userId, nome, idJogo, login, 0, 0]] // sexta coluna = horas acumuladas
             }
         });
     } catch (err) {
@@ -30,7 +31,6 @@ export async function registrarUsuario(userId, nome, idJogo, login) {
 
 export async function atualizarHorasUsuario(userId, horas, minutos) {
     try {
-        // Pega todos os usuários
         const res = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
             range: 'usuarios!A:F'
@@ -44,11 +44,9 @@ export async function atualizarHorasUsuario(userId, horas, minutos) {
             return;
         }
 
-        // Coluna F (index 5) é horas acumuladas
         const current = parseFloat(values[rowIndex][5] || 0);
         const totalHoras = current + horas + minutos / 60;
 
-        // Atualiza a célula
         await sheets.spreadsheets.values.update({
             spreadsheetId: SPREADSHEET_ID,
             range: `usuarios!F${rowIndex + 1}`,

@@ -1,84 +1,65 @@
+// commands/batePonto.js
+import { EmbedBuilder } from 'discord.js';
 import { atualizarHorasUsuario } from '../utils/sheets.js';
-import { DateTime } from 'luxon';
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
+import { formatTimeBR, formatTimestampBR } from '../utils/format.js';
 
-
-const BATE_PONTO_CATEGORY_ID = '1390033257910894599';
+const CATEGORY_VOICE_ID = '1390033257910894599';
 const LOG_CHANNEL_ID = '1390161145037590549';
-const ICON_EMOJI = '<:iconepf:1399436333071728730>';
+const ICON_EMOJI = '<:iconepf:YOUR_ICON_ID>'; // substitua pelo seu ícone da PF
 
-const pontosAtivos = new Map();
+const usersInPoint = new Map(); // usuário => hora de entrada
 
-function formatTimestamp(date) {
-    return `<t:${Math.floor(date.toSeconds())}:t>`;
-}
+export async function voiceStateHandler(client, oldState, newState) {
+    const userId = newState.member.user.id;
 
-export default async function batePontoHandler(client) {
-    client.on('voiceStateUpdate', async (oldState, newState) => {
-        const member = newState.member;
+    // Entrou em uma call da categoria
+    if ((!oldState.channel || oldState.channel.parentId !== CATEGORY_VOICE_ID)
+        && newState.channel && newState.channel.parentId === CATEGORY_VOICE_ID) {
 
-        // Saiu da call da categoria
-        if (
-            oldState.channelId &&
-            (!newState.channelId || newState.channel.parentId !== BATE_PONTO_CATEGORY_ID)
-        ) {
-            if (pontosAtivos.has(member.id)) {
-                const ponto = pontosAtivos.get(member.id);
-                ponto.end = DateTime.now().setZone('America/Sao_Paulo');
+        usersInPoint.set(userId, new Date());
 
-                // Calcula horas e minutos
-                const diff = ponto.end.diff(ponto.start, ['hours', 'minutes']);
-                const hours = diff.hours | 0;
-                const minutes = diff.minutes | 0;
+        const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
+        if (logChannel) {
+            const embed = new EmbedBuilder()
+                .setTitle(`${ICON_EMOJI} Bate-Ponto Iniciado`)
+                .setColor(0xFFD700)
+                .addFields(
+                    { name: 'Membro', value: `<@${userId}>`, inline: true },
+                    { name: 'Início', value: `<t:${formatTimestampBR(new Date())}:t>`, inline: true },
+                    { name: 'Término', value: '~~*EM AÇÃO*~~', inline: true },
+                    { name: 'Total', value: '0h 0m', inline: true }
+                );
+            await logChannel.send({ embeds: [embed] });
+        }
+    }
 
-                // Atualiza na planilha (coluna de horas acumuladas)
-                try {
-                    await atualizarHorasUsuario(member.id, hours, minutes);
-                } catch (err) {
-                    console.error('Erro ao atualizar horas na planilha:', err);
-                }
+    // Saiu da call da categoria
+    if (oldState.channel && oldState.channel.parentId === CATEGORY_VOICE_ID
+        && (!newState.channel || newState.channel.parentId !== CATEGORY_VOICE_ID)) {
 
-                // Envia embed de término no canal de logs
-                const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
-                if (logChannel) {
-                    const embed = new EmbedBuilder()
-                        .setColor(0xFFD700)
-                        .setTitle('Bate-Ponto Finalizado')
-                        .setDescription(
-                            `${ICON_EMOJI} **MEMBRO:** <@${member.id}>\n` +
-                            `${ICON_EMOJI} **INÍCIO:** ${formatTimestamp(ponto.start)}\n` +
-                            `${ICON_EMOJI} **TÉRMINO:** ${formatTimestamp(ponto.end)}\n` +
-                            `${ICON_EMOJI} **TOTAL:** ${hours}h ${minutes}m`
-                        );
-                    await logChannel.send({ embeds: [embed] });
-                }
+        const entrada = usersInPoint.get(userId);
+        if (!entrada) return;
+        const agora = new Date();
+        const diffMs = agora - entrada;
+        const horas = Math.floor(diffMs / 1000 / 60 / 60);
+        const minutos = Math.floor((diffMs / 1000 / 60) % 60);
 
-                pontosAtivos.delete(member.id);
-            }
-            return;
+        await atualizarHorasUsuario(userId, horas, minutos);
+
+        const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
+        if (logChannel) {
+            const embed = new EmbedBuilder()
+                .setTitle(`${ICON_EMOJI} Bate-Ponto Finalizado`)
+                .setColor(0xFFD700)
+                .addFields(
+                    { name: 'Membro', value: `<@${userId}>`, inline: true },
+                    { name: 'Início', value: `<t:${formatTimestampBR(entrada)}:t>`, inline: true },
+                    { name: 'Término', value: `<t:${formatTimestampBR(agora)}:t>`, inline: true },
+                    { name: 'Total', value: `${horas}h ${minutos}m`, inline: true }
+                );
+            await logChannel.send({ embeds: [embed] });
         }
 
-        // Entrou em call da categoria
-        if (newState.channelId && newState.channel.parentId === BATE_PONTO_CATEGORY_ID) {
-            if (!pontosAtivos.has(member.id)) {
-                const start = DateTime.now().setZone('America/Sao_Paulo');
-                pontosAtivos.set(member.id, { start, end: null });
-
-                // Envia embed de início no canal de logs
-                const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
-                if (logChannel) {
-                    const embed = new EmbedBuilder()
-                        .setColor(0xFFD700)
-                        .setTitle('Bate-Ponto Iniciado')
-                        .setDescription(
-                            `${ICON_EMOJI} **MEMBRO:** <@${member.id}>\n` +
-                            `${ICON_EMOJI} **INÍCIO:** ${formatTimestamp(start)}\n` +
-                            `${ICON_EMOJI} **TÉRMINO:** ~~*EM AÇÃO*~~\n` +
-                            `${ICON_EMOJI} **TOTAL:** 0h 0m`
-                        );
-                    await logChannel.send({ embeds: [embed] });
-                }
-            }
-        }
-    });
+        usersInPoint.delete(userId);
+    }
 }

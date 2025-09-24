@@ -1,17 +1,14 @@
 // utils/format.js
+import { DateTime } from 'luxon';
 
-// Formata a data/hora para o formato brasileiro (00:00)
-export function formatTime(date) {
-    return date.toLocaleTimeString('pt-BR', {
-        timeZone: 'America/Sao_Paulo',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-    });
+export function formatTimeBR(date = new Date()) {
+    return DateTime.fromJSDate(date)
+        .setZone('America/Sao_Paulo')
+        .toFormat('HH:mm');
 }
 
-// Formata timestamp completo (opcional para Discord `<t:...:t>`)
-export function formatTimestamp(date) {
-    const unix = Math.floor(date.getTime() / 1000);
-    return `<t:${unix}:t>`;
+export function formatTimestampBR(date = new Date()) {
+    return DateTime.fromJSDate(date)
+        .setZone('America/Sao_Paulo')
+        .toSeconds(); // usado para <t:TIMESTAMP:t> no Discord
 }
