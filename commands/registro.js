@@ -30,7 +30,7 @@ export async function sendRegistroPanel(client) {
         new ButtonBuilder()
             .setCustomId('open_modal')
             .setLabel('Abrir Formulário')
-            .setStyle(ButtonStyle.Primary)
+            .setStyle(ButtonStyle.Secondary) // cinza discreto
             .setEmoji('📝')
     );
 
