@@ -65,10 +65,10 @@ export async function registroHandler(client, interaction) {
             .setTitle(`${ICON_EMOJI} NOVO REGISTRO`)
             .setColor(0xFFD700) // dourado
             .addFields(
-                { name: `${ICON_EMOJI} NOME`, value: `<@${interaction.user.id}>`, inline: true },
-                { name: `${ICON_EMOJI} LOGIN`, value: login, inline: true },
-                { name: `${ICON_EMOJI} ID`, value: idJogo, inline: true },
-                { name: `${ICON_EMOJI} TAG`, value: 'DPF - DRP', inline: true }
+                { name: `${ICON_EMOJI} NOME`, value: `<@${interaction.user.id}>`, inline: false },
+                { name: `${ICON_EMOJI} LOGIN`, value: login, inline: false },
+                { name: `${ICON_EMOJI} ID`, value: idJogo, inline: false },
+                { name: `${ICON_EMOJI} TAG`, value: 'DPF - DRP', inline: false }
             )
             .setFooter({ text: 'DPF - DRP' });
 
