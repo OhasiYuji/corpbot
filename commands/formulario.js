@@ -13,6 +13,9 @@ import {
 } from 'discord.js';
 
 const FORM_CHANNEL_ID = '1390033258309357577'; // canal para enviar painel de formulário
+const PANEL_CHANNEL_ID = '1396852912709308426';
+const TUTORIAL = '1390033257533542410';
+const F3_PENDENTE = '1399875114660532244';
 const RESPONSES_CHANNEL_ID = '1390033258477125632'; // canal para respostas
 const APPROVED_CHANNEL_ID = '1390033258309357578'; // canal de mensagem final se aprovado/reprovado
 const FORM_CATEGORY_ID = '1390033258309357576'; // categoria para criar canais de formulário
@@ -23,6 +26,7 @@ const APPROVED_ROLES = [
     '1390033256652476594',
     '1390033256652476592'
 ];
+
 
 const QUESTIONS = [
     '1º • Qual sua idade?',
@@ -154,7 +158,7 @@ export async function formularioHandler(client, interaction) {
                 const approvedChannel = await client.channels.fetch(APPROVED_CHANNEL_ID);
                 const embedApproved = new EmbedBuilder()
                     .setTitle('Formulário Aprovado ✅')
-                    .setDescription(`${member} foi aprovado. Pode se registrar.`)
+                    .setDescription(`${member} você foi aprovado. Faça o seu registro no canal <#${PANEL_CHANNEL_ID}>, solicite tag no canal <#${F3_PENDENTE}> e veja o nosso tutorial sobre a corporação <#${TUTORIAL}> `)
                     .setColor(0x00FF00);
 
                 await approvedChannel.send({ embeds: [embedApproved] });
