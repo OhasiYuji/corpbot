@@ -8,7 +8,7 @@ export function formatTimeBR(date = new Date()) {
 }
 
 export function formatTimestampBR(date = new Date()) {
-    return DateTime.fromJSDate(date)
+    return Math.floor(DateTime.fromJSDate(date)
         .setZone('America/Sao_Paulo')
-        .toSeconds(); // usado para <t:TIMESTAMP:t> no Discord
+        .toSeconds());
 }

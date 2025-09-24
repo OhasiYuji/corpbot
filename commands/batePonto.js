@@ -5,16 +5,17 @@ import { formatTimeBR, formatTimestampBR } from '../utils/format.js';
 
 const CATEGORY_VOICE_ID = '1390033257910894599';
 const LOG_CHANNEL_ID = '1390161145037590549';
-const ICON_EMOJI = '<:iconepf:1399436333071728730>'; // substitua pelo seu ícone da PF
+const ICON_EMOJI = '<:iconepf:1399436333071728730>'; // ícone da PF
 
-const usersInPoint = new Map(); // usuário => hora de entrada
+// Map para armazenar hora de entrada de cada usuário
+const usersInPoint = new Map(); // userId => Date
 
 export async function voiceStateHandler(client, oldState, newState) {
     const userId = newState.member.user.id;
 
     // Entrou em uma call da categoria
-    if ((!oldState.channel || oldState.channel.parentId !== CATEGORY_VOICE_ID)
-        && newState.channel && newState.channel.parentId === CATEGORY_VOICE_ID) {
+    if ((!oldState.channel || oldState.channel.parentId !== CATEGORY_VOICE_ID) &&
+        newState.channel && newState.channel.parentId === CATEGORY_VOICE_ID) {
 
         usersInPoint.set(userId, new Date());
 
@@ -34,18 +35,24 @@ export async function voiceStateHandler(client, oldState, newState) {
     }
 
     // Saiu da call da categoria
-    if (oldState.channel && oldState.channel.parentId === CATEGORY_VOICE_ID
-        && (!newState.channel || newState.channel.parentId !== CATEGORY_VOICE_ID)) {
+    if (oldState.channel && oldState.channel.parentId === CATEGORY_VOICE_ID &&
+        (!newState.channel || newState.channel.parentId !== CATEGORY_VOICE_ID)) {
 
         const entrada = usersInPoint.get(userId);
         if (!entrada) return;
+
         const agora = new Date();
         const diffMs = agora - entrada;
-        const horas = Math.floor(diffMs / 1000 / 60 / 60);
-        const minutos = Math.floor((diffMs / 1000 / 60) % 60);
 
+        // Calcula total de minutos e depois horas/minutos
+        const minutosTotais = Math.ceil(diffMs / 1000 / 60);
+        const horas = Math.floor(minutosTotais / 60);
+        const minutos = minutosTotais % 60;
+
+        // Atualiza planilha
         await atualizarHorasUsuario(userId, horas, minutos);
 
+        // Envia embed de finalização
         const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
         if (logChannel) {
             const embed = new EmbedBuilder()
