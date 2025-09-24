@@ -5,7 +5,7 @@ import { google } from 'googleapis';
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 
 // Credenciais direto da variável de ambiente
-const CREDENTIALS = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
+const CREDENTIALS = JSON.parse(process.env.GOOGLE_CREDENTIALS);
 
 const auth = new google.auth.GoogleAuth({
     credentials: CREDENTIALS,
