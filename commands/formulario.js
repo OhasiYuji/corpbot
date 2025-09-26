@@ -138,6 +138,11 @@ export async function formularioHandler(client, interaction) {
                 const responseMessage = await responseChannel.send({ embeds: [embedResponses], components: [row] });
 
                 await channel.send('Formulário enviado! Aguarde a aprovação/reprovação.');
+                
+                // Apagar o canal após 10 segundos
+                setTimeout(() => {
+                    channel.delete().catch(console.error);
+                }, 10000);
             }
 
             // Aprovar
