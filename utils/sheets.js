@@ -11,7 +11,28 @@ const auth = new google.auth.GoogleAuth({
 
 const sheets = google.sheets({ version: 'v4', auth });
 
-// Atualizar horas em minutos diretamente na coluna F
+/**
+ * Registra um novo usuário na planilha.
+ * Inicializa a coluna F (minutos) com 0.
+ */
+export async function registrarUsuario(userId, nome, idJogo, login) {
+  try {
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'usuarios!A:F',
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [[userId, nome, idJogo, login, 0, 0]] // A=userId, B=nome, C=idJogo, D=login, E=?, F=minutos
+      }
+    });
+  } catch (err) {
+    console.error('Erro ao registrar usuário:', err);
+  }
+}
+
+/**
+ * Atualiza os minutos de um usuário na coluna F.
+ */
 export async function atualizarHorasUsuario(userId, minutosAdicionados) {
   try {
     const res = await sheets.spreadsheets.values.get({
@@ -44,6 +65,9 @@ export async function atualizarHorasUsuario(userId, minutosAdicionados) {
   }
 }
 
+/**
+ * Busca os dados de um usuário.
+ */
 export async function getUsuario(userId) {
   try {
     const res = await sheets.spreadsheets.values.get({
@@ -69,6 +93,9 @@ export async function getUsuario(userId) {
   }
 }
 
+/**
+ * Busca os cargos/metas da planilha.
+ */
 export async function getCargos() {
   try {
     const res = await sheets.spreadsheets.values.get({

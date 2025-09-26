@@ -1,4 +1,3 @@
-// commands/registro.js
 import {
     ActionRowBuilder,
     ButtonBuilder,
@@ -15,7 +14,7 @@ const PANEL_CHANNEL_ID = '1396852912709308426';
 const USER_INFO_CHANNEL_ID = '1390033258821062760';
 const ICON_EMOJI = '<:iconepf:1399436333071728730>'; // ícone da PF
 
-// Função para enviar o painel de registro com botão
+// Envia painel de registro
 export async function sendRegistroPanel(client) {
     const panelChannel = await client.channels.fetch(PANEL_CHANNEL_ID);
     if (!panelChannel) return console.error('Canal do painel não encontrado');
@@ -30,16 +29,15 @@ export async function sendRegistroPanel(client) {
         new ButtonBuilder()
             .setCustomId('open_modal')
             .setLabel('Abrir Formulário')
-            .setStyle(ButtonStyle.Secondary) // cinza discreto
+            .setStyle(ButtonStyle.Secondary)
             .setEmoji('📝')
     );
 
     await panelChannel.send({ embeds: [embed], components: [row] });
 }
 
-// Função principal de interação (botão + modal)
+// Handler de interações
 export async function registroHandler(client, interaction) {
-    // Abrir modal
     if (interaction.isButton() && interaction.customId === 'open_modal') {
         const modal = new ModalBuilder()
             .setCustomId('registration_modal')
@@ -73,20 +71,17 @@ export async function registroHandler(client, interaction) {
         return;
     }
 
-    // Receber modal submit
     if (interaction.type === InteractionType.ModalSubmit && interaction.customId === 'registration_modal') {
         const nome = interaction.fields.getTextInputValue('nome');
         const idJogo = interaction.fields.getTextInputValue('id_jogo');
         const login = interaction.fields.getTextInputValue('login');
 
-        // Atualiza apelido
         try {
             await interaction.member.setNickname(`DPF » ${nome} (${idJogo})`);
         } catch (err) {
             console.error('Erro ao mudar apelido:', err);
         }
 
-        // Embed de registro enviado para canal de informações
         const embed = new EmbedBuilder()
             .setTitle(`${ICON_EMOJI} NOVO REGISTRO`)
             .setColor(0xFFD700)
@@ -101,7 +96,7 @@ export async function registroHandler(client, interaction) {
         const infoChannel = await client.channels.fetch(USER_INFO_CHANNEL_ID);
         if (infoChannel) await infoChannel.send({ embeds: [embed] });
 
-        // Registrar no Google Sheets
+        // Registrar usuário na planilha
         await registrarUsuario(interaction.user.id, nome, idJogo, login);
 
         await interaction.reply({ content: 'Registro realizado com sucesso!', ephemeral: true });
