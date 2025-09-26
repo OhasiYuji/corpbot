@@ -3,7 +3,7 @@ import { atualizarHorasUsuario, getUsuario, getCargos } from '../utils/sheets.js
 
 const CATEGORY_VOICE_ID = '1390033257910894599';
 const LOG_CHANNEL_ID = '1390161145037590549';
-const ICON_EMOJI = '<:iconepf:1399436333071728730>';
+const ICON_PF = '<:iconepf:1399436333071728730>';
 
 const usersInPoint = new Map();
 const messagesInPoint = new Map();
@@ -22,10 +22,10 @@ export async function voiceStateHandler(client, oldState, newState) {
     if (!logChannel) return;
 
     const msg = await logChannel.send(
-        `:Policiafederallogo:  **MEMBRO:** <@${userId}>\n` +
-        `:Policiafederallogo:  **INÍCIO:** <t:${Math.floor(agora.getTime()/1000)}:t>\n` +
-        `:Policiafederallogo:  **TÉRMINO:** ~~*EM AÇÃO*~~\n` +
-        `:Policiafederallogo:  **TOTAL:** 0m`
+        `${ICON_PF}  **MEMBRO:** <@${userId}>\n` +
+        `${ICON_PF}  **INÍCIO:** <t:${Math.floor(agora.getTime()/1000)}:t>\n` +
+        `${ICON_PF}  **TÉRMINO:** ~~*EM AÇÃO*~~\n` +
+        `${ICON_PF}  **TOTAL:** 0m`
     );
 
     // Guardamos a mensagem para editar depois
