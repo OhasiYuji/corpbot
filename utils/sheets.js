@@ -16,6 +16,7 @@ function parseStoredToMinutes(value) {
   return isNaN(num) ? 0 : num;
 }
 
+// Registrar novo usuário
 export async function registrarUsuario(userId, nome, idJogo, login) {
   try {
     await sheets.spreadsheets.values.append({
@@ -31,6 +32,7 @@ export async function registrarUsuario(userId, nome, idJogo, login) {
   }
 }
 
+// Atualizar horas de um usuário
 export async function atualizarHorasUsuario(userId, minutosAdicionados) {
   try {
     const res = await sheets.spreadsheets.values.get({
@@ -60,6 +62,7 @@ export async function atualizarHorasUsuario(userId, minutosAdicionados) {
   }
 }
 
+// Retorna todos os usuários
 export async function getUsuarios() {
   try {
     const res = await sheets.spreadsheets.values.get({
@@ -81,6 +84,13 @@ export async function getUsuarios() {
   }
 }
 
+// Retorna um usuário específico
+export async function getUsuario(userId) {
+  const usuarios = await getUsuarios();
+  return usuarios.find(u => u.userId === userId) || null;
+}
+
+// Retorna cargos e metas
 export async function getCargos() {
   try {
     const res = await sheets.spreadsheets.values.get({
