@@ -4,6 +4,7 @@ import { Client, GatewayIntentBits, Partials } from 'discord.js';
 import { registroHandler, sendRegistroPanel } from './commands/registro.js';
 import { painelHorasHandler, sendPainelHoras } from './commands/painelHoras.js';
 import { voiceStateHandler } from './commands/batePonto.js';
+import { formularioHandler, enviarPainelFormulario } from './commands/formulario.js';
 
 const client = new Client({
   intents: [
@@ -18,17 +19,29 @@ const client = new Client({
 
 client.once('ready', async () => {
   console.log(`Bot logado como ${client.user.tag}`);
-  // reenvia paineis (falha silenciosa se canal nao existir)
-  await sendRegistroPanel(client).catch(()=>null);
-  await sendPainelHoras(client).catch(()=>null);
+
+  // Reenvia paineis (falha silenciosa se canal não existir)
+  await sendRegistroPanel(client).catch(() => null);
+  await sendPainelHoras(client).catch(() => null);
+  await enviarPainelFormulario(client).catch(() => null);
+
   console.log('Paineis (tentativa) enviados.');
 });
 
 client.on('interactionCreate', async (interaction) => {
   try {
-    // Delegamos a cada handler; cada handler cuida de defer/reply
+    // 1️⃣ Formulário
+    await formularioHandler(client, interaction);
+
+    // 2️⃣ Registro
     await registroHandler(client, interaction);
-    await painelHorasHandler(client, interaction);
+
+    // 3️⃣ Painel de Horas
+    const painelIds = ['consultar_horas','adicionar_horas','remover_horas','limpar_horas','up_automatico'];
+    if (interaction.isButton() && painelIds.includes(interaction.customId)) {
+      await painelHorasHandler(client, interaction);
+    }
+
   } catch (err) {
     console.error('Erro ao processar interação:', err);
     try {
