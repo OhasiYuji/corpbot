@@ -1,45 +1,75 @@
 import { GoogleSpreadsheet } from 'google-spreadsheet';
-import 'dotenv/config';
+import { readFileSync } from 'fs';
+import path from 'path';
 
-const doc = new GoogleSpreadsheet(process.env.SHEET_ID);
-await doc.useServiceAccountAuth({
-  client_email: process.env.GOOGLE_CLIENT_EMAIL,
-  private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-});
+// Configuração da planilha
+const SPREADSHEET_ID = 'SUA_PLANILHA_ID';
+const CREDENTIALS = JSON.parse(readFileSync(path.join(process.cwd(), 'data', 'service-account.json'), 'utf8'));
+const SHEET_NAME = 'usuarios';
 
-await doc.loadInfo();
+const doc = new GoogleSpreadsheet(SPREADSHEET_ID);
 
-const sheet = doc.sheetsByTitle['usuarios']; // sua aba de usuários
+async function loadSheet() {
+  await doc.useServiceAccountAuth(CREDENTIALS);
+  await doc.loadInfo();
+  const sheet = doc.sheetsByTitle[SHEET_NAME];
+  if (!sheet) throw new Error(`Aba "${SHEET_NAME}" não encontrada`);
+  return sheet;
+}
 
+// Retorna todos os usuários
 export async function getUsuariosTodos() {
+  const sheet = await loadSheet();
   await sheet.loadCells();
   const rows = await sheet.getRows();
   return rows.map(r => ({
     userId: r.id_discord,
     nome: r.nome,
-    minutos: parseInt(r.minutos) || 0,
+    idEmJogo: r.id_em_jogo,
+    login: r.login,
+    advertencia: parseInt(r.advertencia) || 0,
+    minutos: parseInt(r.minutos) || 0
   }));
 }
 
-export async function getUsuario(userId) {
+// Atualiza minutos do usuário (pode ser positivo ou negativo)
+export async function atualizarHorasUsuario(userId, minutos) {
+  const sheet = await loadSheet();
   const rows = await sheet.getRows();
-  const row = rows.find(r => r.id_discord === userId);
-  if (!row) return null;
-  return {
-    userId: row.id_discord,
-    nome: row.nome,
-    minutos: parseInt(row.minutos) || 0,
-  };
+  let usuario = rows.find(r => r.id_discord === userId);
+
+  if (!usuario) {
+    // Se não existir, registra com minutos iniciais
+    usuario = await sheet.addRow({
+      id_discord: userId,
+      nome: 'Desconhecido',
+      id_em_jogo: '',
+      login: '',
+      advertencia: 0,
+      minutos: minutos
+    });
+    return usuario.minutos;
+  }
+
+  usuario.minutos = (parseInt(usuario.minutos) || 0) + minutos;
+  await usuario.save();
+  return usuario.minutos;
 }
 
-export async function atualizarHorasUsuario(userId, minutos) {
+// Registra novo usuário
+export async function registrarUsuario(userId, nome, idEmJogo, login) {
+  const sheet = await loadSheet();
   const rows = await sheet.getRows();
-  let row = rows.find(r => r.id_discord === userId);
-  if (!row) {
-    row = await sheet.addRow({ id_discord: userId, minutos });
-    return minutos;
-  }
-  row.minutos = parseInt(row.minutos || 0) + minutos;
-  await row.save();
-  return row.minutos;
+  const existe = rows.find(r => r.id_discord === userId);
+  if (existe) return false; // Já registrado
+
+  await sheet.addRow({
+    id_discord: userId,
+    nome: nome || 'Desconhecido',
+    id_em_jogo: idEmJogo || '',
+    login: login || '',
+    advertencia: 0,
+    minutos: 0
+  });
+  return true;
 }

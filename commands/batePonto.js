@@ -1,21 +1,22 @@
-import { atualizarHorasUsuario, getUsuario } from '../utils/sheets.js';
 import fs from 'fs';
 import path from 'path';
+import { atualizarHorasUsuario } from '../utils/sheets.js';
 
 const CATEGORY_VOICE_ID = '1390033257910894599';
 const LOG_CHANNEL_ID = '1390161145037590549';
-const ICON = ':Policiafederallogo:';
-
-const metasPath = path.resolve('./data/metas.json');
-const metas = JSON.parse(fs.readFileSync(metasPath, 'utf-8'));
+const ICON_EMOJI = ':Policiafederallogo:';
 
 const usersInPoint = new Map();
 const messagesInPoint = new Map();
 
+// Carrega as metas do JSON
+const metasPath = path.join(process.cwd(), 'data', 'metas.json');
+const metas = JSON.parse(fs.readFileSync(metasPath, 'utf8'));
+
 export async function voiceStateHandler(client, oldState, newState) {
   const userId = newState.member.user.id;
 
-  // Entrou na categoria
+  // Entrou na categoria de voice
   if ((!oldState.channel || oldState.channel.parentId !== CATEGORY_VOICE_ID) &&
       newState.channel && newState.channel.parentId === CATEGORY_VOICE_ID) {
 
@@ -23,12 +24,17 @@ export async function voiceStateHandler(client, oldState, newState) {
 
     const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
     if (logChannel) {
-      const msg = await logChannel.send(`${ICON} **MEMBRO:** <@${userId}>\n${ICON} **INÍCIO:** <t:${Math.floor(Date.now()/1000)}:t>\n${ICON} **TÉRMINO:** ~~*EM AÇÃO*~~\n${ICON} **TOTAL:** 0m`);
+      const msg = await logChannel.send(
+`${ICON_EMOJI} **MEMBRO:** <@${userId}>
+${ICON_EMOJI} **INÍCIO:** <t:${Math.floor(Date.now()/1000)}:t>
+${ICON_EMOJI} **TÉRMINO:** ~~*EM AÇÃO*~~
+${ICON_EMOJI} **TOTAL:** 0m`
+      );
       messagesInPoint.set(userId, msg);
     }
   }
 
-  // Saiu da categoria
+  // Saiu da categoria de voice
   if (oldState.channel && oldState.channel.parentId === CATEGORY_VOICE_ID &&
       (!newState.channel || newState.channel.parentId !== CATEGORY_VOICE_ID)) {
 
@@ -43,7 +49,13 @@ export async function voiceStateHandler(client, oldState, newState) {
 
     const msg = messagesInPoint.get(userId);
     if (msg) {
-      await msg.edit(`${ICON} **MEMBRO:** <@${userId}>\n${ICON} **INÍCIO:** <t:${Math.floor(entrada.getTime()/1000)}:t>\n${ICON} **TÉRMINO:** <t:${Math.floor(agora.getTime()/1000)}:t>\n${ICON} **TOTAL:** ${minutosTotais}m\n-# - O ponto foi fechado automaticamente, o membro saiu da call.`);
+      await msg.edit(
+`${ICON_EMOJI} **MEMBRO:** <@${userId}>
+${ICON_EMOJI} **INÍCIO:** <t:${Math.floor(entrada.getTime()/1000)}:t>
+${ICON_EMOJI} **TÉRMINO:** <t:${Math.floor(agora.getTime()/1000)}:t>
+${ICON_EMOJI} **TOTAL:** ${minutosTotais}m
+-# - O ponto foi fechado automaticamente, o membro saiu da call.`
+      );
     }
 
     usersInPoint.delete(userId);
@@ -51,16 +63,18 @@ export async function voiceStateHandler(client, oldState, newState) {
 
     // Up automático
     try {
-      const usuario = await getUsuario(userId);
-      if (!usuario) return;
+      const usuarioMinutos = totalMin;
 
-      const elegiveis = metas.filter(c => usuario.minutos >= c.minutos);
-      if (elegiveis.length) {
-        const newRank = elegiveis.sort((a,b)=>b.minutos - a.minutos)[0];
+      const metasElegiveis = metas
+        .filter(m => usuarioMinutos >= m.minutos)
+        .sort((a, b) => b.minutos - a.minutos);
+
+      if (metasElegiveis.length) {
+        const newRank = metasElegiveis[0];
         const member = await newState.guild.members.fetch(userId);
 
         if (!member.roles.cache.has(newRank.roleId)) {
-          const allRoleIds = metas.map(c => c.roleId);
+          const allRoleIds = metas.map(m => m.roleId);
           const toRemove = allRoleIds.filter(id => member.roles.cache.has(id));
           if (toRemove.length) await member.roles.remove(toRemove).catch(console.error);
 
@@ -68,10 +82,14 @@ export async function voiceStateHandler(client, oldState, newState) {
 
           const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
           if (logChannel) {
-            await logChannel.send(`${ICON} Parabéns <@${userId}>! Você foi promovido para **${newRank.nome}** após atingir **${usuario.minutos} minutos**.`);
+            await logChannel.send(
+`${ICON_EMOJI} **PROMOÇÃO AUTOMÁTICA**
+Parabéns <@${userId}>! Você foi promovido para **${newRank.nome}** após atingir **${usuarioMinutos} minutos**.`
+            );
           }
         }
       }
+
     } catch (err) {
       console.error('Erro no up automático:', err);
     }
