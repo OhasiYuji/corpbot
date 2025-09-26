@@ -1,9 +1,9 @@
-// index.js
 import 'dotenv/config';
 import { Client, GatewayIntentBits, Partials } from 'discord.js';
 import { registroHandler } from './commands/registro.js';
 import { voiceStateHandler } from './commands/batePonto.js';
 import { formularioHandler, enviarPainelFormulario } from './commands/formulario.js';
+import { sendPainelHoras, painelHorasHandler } from './commands/painelHoras.js'; // <--- import painel de horas
 
 const client = new Client({
     intents: [
@@ -24,14 +24,14 @@ client.once('ready', async () => {
     const registroChannelId = '1396852912709308426';
     const registroChannel = await client.channels.fetch(registroChannelId);
     if (registroChannel) {
-        await registroHandler(client, {
-            isButton: () => false, // apenas para enviar botão inicial
-            showModal: async () => {}
-        });
+        await registroHandler(client, { isButton: () => false, showModal: async () => {} });
     }
 
     // Enviar painel de formulário
     await enviarPainelFormulario(client);
+
+    // Enviar painel de horas (admin)
+    await sendPainelHoras(client);
 
     console.log('Painéis enviados!');
 });
@@ -44,6 +44,10 @@ client.on('interactionCreate', async (interaction) => {
 
         // Formulário
         await formularioHandler(client, interaction);
+
+        // Painel de horas
+        await painelHorasHandler(client, interaction);
+
     } catch (err) {
         console.error('Erro ao processar interação:', err);
     }
