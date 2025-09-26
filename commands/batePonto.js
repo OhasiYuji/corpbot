@@ -5,6 +5,7 @@ import { formatTimestampBR } from '../utils/format.js';
 
 const CATEGORY_VOICE_ID = '1390033257910894599';
 const LOG_CHANNEL_ID = '1390161145037590549';
+const UPAMENTO_CHANNEL_ID = '1390033257533542417';
 const ICON_EMOJI = '<:iconepf:1399436333071728730>';
 
 const usersInPoint = new Map();
@@ -12,7 +13,7 @@ const usersInPoint = new Map();
 export async function voiceStateHandler(client, oldState, newState) {
   const userId = newState.member.user.id;
 
-  // Entrou
+  // Entrou na categoria de bate-ponto
   if ((!oldState.channel || oldState.channel.parentId !== CATEGORY_VOICE_ID) &&
       newState.channel && newState.channel.parentId === CATEGORY_VOICE_ID) {
 
@@ -33,7 +34,7 @@ export async function voiceStateHandler(client, oldState, newState) {
     }
   }
 
-  // Saiu
+  // Saiu da categoria de bate-ponto
   if (oldState.channel && oldState.channel.parentId === CATEGORY_VOICE_ID &&
       (!newState.channel || newState.channel.parentId !== CATEGORY_VOICE_ID)) {
 
@@ -80,18 +81,19 @@ export async function voiceStateHandler(client, oldState, newState) {
             const toRemove = allRoleIds.filter(id => member.roles.cache.has(id));
             if (toRemove.length) await member.roles.remove(toRemove).catch(console.error);
 
+            const oldRoles = toRemove.length ? `<@&${toRemove[0]}>` : 'Nenhum';
             await member.roles.add(newRank.roleId).catch(console.error);
 
-            const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
-            if (logChannel) {
-              const embed = new EmbedBuilder()
-                .setTitle(`${ICON_EMOJI} Promoção Automática`)
-                .setColor(0x32CD32)
-                .setDescription(
-                  `Parabéns <@${userId}>! Você foi promovido para **${newRank.nome}** ` +
-                  `após atingir **${usuario.hoursFloat.toFixed(2)}h (${usuario.totalMinutes} min)**.`
-                );
-              await logChannel.send({ embeds: [embed] });
+            // Canal específico para upamento
+            const upamentoChannel = await client.channels.fetch(UPAMENTO_CHANNEL_ID);
+            if (upamentoChannel) {
+              await upamentoChannel.send(
+                `DPF - UPAMENTO <:Policiafederallogo:1399436333071728730>\n\n` +
+                `Membro: <@${userId}>\n` +
+                `Cargo antigo: ${oldRoles}\n` +
+                `Novo cargo: <@&${newRank.roleId}>\n` +
+                `Motivo : <@&1390033256627572761>`
+              );
             }
           }
         }
