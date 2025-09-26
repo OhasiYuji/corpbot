@@ -62,7 +62,7 @@ export async function voiceStateHandler(client, oldState, newState) {
                 { name: 'Término', value: `<t:${Math.floor(agora.getTime() / 1000)}:t>`, inline: true },
                 { name: 'Total', value: `${minutosTotais} minutos`, inline: true }
             )
-            .setFooter({ text: '-# - O ponto foi fechado automaticamente, o membro saiu da call.' });
+            .setFooter({ text: '- O ponto foi fechado automaticamente, o membro saiu da call.' });
 
         if (messageId) {
             // Edita a mensagem original
