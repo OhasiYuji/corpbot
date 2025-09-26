@@ -1,9 +1,7 @@
-// commands/batePonto.js
 import { atualizarHorasUsuario, getUsuario, getCargos } from '../utils/sheets.js';
 
 const CATEGORY_VOICE_ID = '1390033257910894599';
 const LOG_CHANNEL_ID = '1390161145037590549';
-// emoji custom (use the real one do seu servidor)
 const ICON = '<:Policiafederallogo:1399436333071728730>';
 
 const usersInPoint = new Map();
