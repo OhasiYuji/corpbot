@@ -13,6 +13,5 @@
   { "nome": "Agente Operacional", "roleId": "1390033256682098764", "minutos": 480 },
   { "nome": "Agente 1ª Classe", "roleId": "1390033256682098762", "minutos": 480 },
   { "nome": "Agente 2ª Classe", "roleId": "1390033256682098761", "minutos": 420 },
-  { "nome": "Agente 3ª Classe", "roleId": "1395975337413967943", "minutos": 200 },
-  { "nome": "Estagiário", "roleId": "1390033256652476596", "minutos": 0 }
+  { "nome": "Agente 3ª Classe", "roleId": "1395975337413967943", "minutos": 200 }
 ]
