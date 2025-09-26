@@ -11,28 +11,26 @@ const messagesInPoint = new Map();
 export async function voiceStateHandler(client, oldState, newState) {
   const userId = newState.member.user.id;
 
-  // Entrou
-  if ((!oldState.channel || oldState.channel.parentId !== CATEGORY_VOICE_ID) &&
-      newState.channel && newState.channel.parentId === CATEGORY_VOICE_ID) {
+    // Entrou
+    if ((!oldState.channel || oldState.channel.parentId !== CATEGORY_VOICE_ID) &&
+        newState.channel && newState.channel.parentId === CATEGORY_VOICE_ID) {
 
-    usersInPoint.set(userId, new Date());
+    const agora = new Date();
+    usersInPoint.set(userId, agora);
 
     const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
-    if (logChannel) {
-      const embed = new EmbedBuilder()
-        .setTitle(`${ICON_EMOJI} Bate-Ponto Iniciado`)
-        .setColor(0x32CD32)
-        .addFields(
-          { name: 'Membro', value: `<@${userId}>`, inline: true },
-          { name: 'Início', value: `<t:${Math.floor(Date.now()/1000)}:t>`, inline: true },
-          { name: 'Término', value: '~~*EM AÇÃO*~~', inline: true },
-          { name: 'Total', value: '0m', inline: true }
-        );
+    if (!logChannel) return;
 
-      const msg = await logChannel.send({ embeds: [embed] });
-      messagesInPoint.set(userId, msg);
+    const msg = await logChannel.send(
+        `:Policiafederallogo:  **MEMBRO:** <@${userId}>\n` +
+        `:Policiafederallogo:  **INÍCIO:** <t:${Math.floor(agora.getTime()/1000)}:t>\n` +
+        `:Policiafederallogo:  **TÉRMINO:** ~~*EM AÇÃO*~~\n` +
+        `:Policiafederallogo:  **TOTAL:** 0m`
+    );
+
+    // Guardamos a mensagem para editar depois
+    messagesInPoint.set(userId, msg);
     }
-  }
 
     // Saiu
     if (oldState.channel && oldState.channel.parentId === CATEGORY_VOICE_ID &&
@@ -42,26 +40,21 @@ export async function voiceStateHandler(client, oldState, newState) {
     if (!entrada) return;
 
     const agora = new Date();
-    const diffMs = agora - entrada;
-    const minutosTotais = Math.ceil(diffMs / 1000 / 60);
+    const diffMinutos = Math.ceil((agora - entrada) / 1000 / 60);
 
-    const totalMin = await atualizarHorasUsuario(userId, minutosTotais);
+    // Atualiza no Google Sheets
+    await atualizarHorasUsuario(userId, diffMinutos);
 
     const msg = messagesInPoint.get(userId);
     if (msg) {
-        // Pega os dados originais do embed e atualiza corretamente
-        const embed = new EmbedBuilder()
-        .setTitle(`${ICON_EMOJI} Bate-Ponto Finalizado`) // ALTEREI O TÍTULO
-        .setColor(0xFFD700)
-        .addFields(
-            { name: 'Membro', value: `<@${userId}>`, inline: true },
-            { name: 'Início', value: `<t:${Math.floor(entrada.getTime()/1000)}:t>`, inline: true },
-            { name: 'Término', value: `<t:${Math.floor(agora.getTime()/1000)}:t>`, inline: true },
-            { name: 'Total', value: `${minutosTotais}m`, inline: true }
-        )
-        .setFooter({ text: '- O ponto foi fechado automaticamente, o membro saiu da call.' });
+        const texto = 
+        `:Policiafederallogo:  **MEMBRO:** <@${userId}>\n` +
+        `:Policiafederallogo:  **INÍCIO:** <t:${Math.floor(entrada.getTime()/1000)}:t>\n` +
+        `:Policiafederallogo:  **TÉRMINO:** <t:${Math.floor(agora.getTime()/1000)}:t>\n` +
+        `:Policiafederallogo:  **TOTAL:** ${diffMinutos}m\n` +
+        `-# - O ponto foi fechado automaticamente, o membro saiu da call.`;
 
-        await msg.edit({ embeds: [embed] });
+        await msg.edit({ content: texto });
     }
 
     usersInPoint.delete(userId);
