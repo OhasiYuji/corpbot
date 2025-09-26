@@ -1,5 +1,4 @@
 // commands/batePonto.js
-import { EmbedBuilder } from 'discord.js';
 import { atualizarHorasUsuario, getUsuario, getCargos } from '../utils/sheets.js';
 import { formatTimestampBR } from '../utils/format.js';
 
@@ -21,16 +20,14 @@ export async function voiceStateHandler(client, oldState, newState) {
 
     const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
     if (logChannel) {
-      const embed = new EmbedBuilder()
-        .setTitle(`${ICON_EMOJI} Bate-Ponto Iniciado`)
-        .setColor(0xFFD700)
-        .addFields(
-          { name: 'Membro', value: `<@${userId}>`, inline: true },
-          { name: 'Início', value: `<t:${formatTimestampBR(new Date())}:t>`, inline: true },
-          { name: 'Término', value: '~~*EM AÇÃO*~~', inline: true },
-          { name: 'Total', value: '0h 0m', inline: true }
-        );
-      await logChannel.send({ embeds: [embed] });
+      const agora = new Date();
+      await logChannel.send(
+        `${ICON_EMOJI} Bate-Ponto Iniciado\n` +
+        `Membro: <@${userId}>\n` +
+        `Início: <t:${formatTimestampBR(agora)}:t>\n` +
+        `Término: ~~*EM AÇÃO*~~\n` +
+        `Total: 0 minutos`
+      );
     }
   }
 
@@ -44,23 +41,18 @@ export async function voiceStateHandler(client, oldState, newState) {
     const agora = new Date();
     const diffMs = agora - entrada;
     const minutosTotais = Math.ceil(diffMs / 1000 / 60);
-    const horas = Math.floor(minutosTotais / 60);
-    const minutos = minutosTotais % 60;
 
-    const result = await atualizarHorasUsuario(userId, horas, minutos);
+    const result = await atualizarHorasUsuario(userId, minutosTotais);
 
     const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
     if (logChannel) {
-      const embed = new EmbedBuilder()
-        .setTitle(`${ICON_EMOJI} Bate-Ponto Finalizado`)
-        .setColor(0xFFD700)
-        .addFields(
-          { name: 'Membro', value: `<@${userId}>`, inline: true },
-          { name: 'Início', value: `<t:${formatTimestampBR(entrada)}:t>`, inline: true },
-          { name: 'Término', value: `<t:${formatTimestampBR(agora)}:t>`, inline: true },
-          { name: 'Total', value: `${horas}h ${minutos}m`, inline: true }
-        );
-      await logChannel.send({ embeds: [embed] });
+      await logChannel.send(
+        `${ICON_EMOJI} Bate-Ponto Finalizado\n` +
+        `Membro: <@${userId}>\n` +
+        `Início: <t:${formatTimestampBR(entrada)}:t>\n` +
+        `Término: <t:${formatTimestampBR(agora)}:t>\n` +
+        `Total: ${minutosTotais} minutos`
+      );
     }
 
     usersInPoint.delete(userId);
@@ -84,7 +76,6 @@ export async function voiceStateHandler(client, oldState, newState) {
             const oldRoles = toRemove.length ? `<@&${toRemove[0]}>` : 'Nenhum';
             await member.roles.add(newRank.roleId).catch(console.error);
 
-            // Canal específico para upamento
             const upamentoChannel = await client.channels.fetch(UPAMENTO_CHANNEL_ID);
             if (upamentoChannel) {
               await upamentoChannel.send(
