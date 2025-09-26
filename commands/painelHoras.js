@@ -59,8 +59,14 @@ export async function painelHorasHandler(client, interaction) {
       const usuarios = await getUsuariosTodos();
       if (!usuarios.length) return interaction.reply({ content: 'Nenhum usuário registrado.', ephemeral: true });
 
-      const texto = usuarios.map(u => `${u.nome} (${u.userId}): ${u.minutos} minutos`).join('\n');
-      await interaction.reply({ content: `**Horas dos Usuários:**\n${texto}`, ephemeral: true });
+      const embed = new EmbedBuilder()
+        .setTitle(`${ICON_EMOJI} Horas dos Usuários`)
+        .setColor(0x00FF00)
+        .setDescription(
+          usuarios.map(u => `${ICON_EMOJI} <@${u.userId}>: **${u.minutos} minutos**`).join('\n')
+        );
+
+      await interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
     if (interaction.customId === 'adicionar_horas' || interaction.customId === 'remover_horas') {
@@ -99,18 +105,24 @@ export async function painelHorasHandler(client, interaction) {
     if (interaction.customId === 'up_automatico') {
       const usuarios = await getUsuariosTodos();
       const cargos = await getCargos();
-      let mensagem = '';
+      const embed = new EmbedBuilder()
+        .setTitle(`${ICON_EMOJI} Up Automático`)
+        .setColor(0xFFD700);
+
+      let description = '';
 
       for (const u of usuarios) {
         const elegiveis = cargos.filter(c => u.minutos >= c.minutos);
         if (elegiveis.length) {
           const top = elegiveis.sort((a,b)=>b.minutos - a.minutos)[0];
-          mensagem += `${u.nome} atingiu a meta de ${top.minutos} minutos: up para ${top.nome}\n`;
+          description += `${ICON_EMOJI} <@${u.userId}> atingiu a meta de ${top.minutos} minutos: up para **${top.nome}**\n`;
         }
       }
 
-      if (!mensagem) mensagem = 'Ninguém atingiu a meta.';
-      await interaction.reply({ content: mensagem, ephemeral: true });
+      if (!description) description = 'Ninguém atingiu a meta.';
+      embed.setDescription(description);
+
+      await interaction.reply({ embeds: [embed], ephemeral: true });
     }
   }
 
