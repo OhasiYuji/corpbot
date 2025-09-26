@@ -184,22 +184,26 @@ export async function formularioHandler(client, interaction) {
                 const member = await interaction.guild.members.fetch(targetUserId);
                 if (!member) return interaction.reply({ content: 'Membro não encontrado.', ephemeral: true });
 
-                // Abrir modal para motivo
-                const modal = new ModalBuilder()
-                    .setCustomId(`reject_reason_${targetUserId}`)
-                    .setTitle('Motivo da Reprovação');
+                // Limpa a mensagem original
+                await interaction.update({ content: 'Reprovado!', components: [], embeds: [] });
 
-                modal.addComponents(
-                    new ActionRowBuilder().addComponents(
-                        new TextInputBuilder()
-                            .setCustomId('reason')
-                            .setLabel('Digite o motivo')
-                            .setStyle(TextInputStyle.Paragraph)
-                            .setRequired(true)
-                    )
-                );
+                const rejectedChannel = await client.channels.fetch(APPROVED_CHANNEL_ID); // pode trocar por um canal só de reprovados
 
-                await interaction.showModal(modal);
+                const embedRejected = new EmbedBuilder()
+                    .setTitle(`${ICON_PF} Formulário Reprovado`)
+                    .setDescription(`
+                    Olá ${member}, infelizmente suas respostas estavam incorretas.  
+
+                    📌 **Próximos passos:**
+                    • Leia atentamente as regras no site:  
+                    🔗 https://distritoroleplay.com/regras
+                    • Refaça o formulário após se preparar melhor.
+                    `)
+                    .setColor(0xFF0000)
+                    .setFooter({ text: 'Polícia Federal - DRP' });
+
+                // Envia menção + embed
+                await rejectedChannel.send({ content: `${member}`, embeds: [embedRejected] });
             }
         }
 
