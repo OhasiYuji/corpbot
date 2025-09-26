@@ -1,9 +1,13 @@
-import { EmbedBuilder } from 'discord.js';
-import { atualizarHorasUsuario, getUsuario, getCargos } from '../utils/sheets.js';
+import { atualizarHorasUsuario, getUsuario } from '../utils/sheets.js';
+import fs from 'fs';
+import path from 'path';
 
 const CATEGORY_VOICE_ID = '1390033257910894599';
 const LOG_CHANNEL_ID = '1390161145037590549';
-const ICON_PF = '<:iconepf:1399436333071728730>';
+const ICON = ':Policiafederallogo:';
+
+const metasPath = path.resolve('./data/metas.json');
+const metas = JSON.parse(fs.readFileSync(metasPath, 'utf-8'));
 
 const usersInPoint = new Map();
 const messagesInPoint = new Map();
@@ -11,50 +15,35 @@ const messagesInPoint = new Map();
 export async function voiceStateHandler(client, oldState, newState) {
   const userId = newState.member.user.id;
 
-    // Entrou
-    if ((!oldState.channel || oldState.channel.parentId !== CATEGORY_VOICE_ID) &&
-        newState.channel && newState.channel.parentId === CATEGORY_VOICE_ID) {
+  // Entrou na categoria
+  if ((!oldState.channel || oldState.channel.parentId !== CATEGORY_VOICE_ID) &&
+      newState.channel && newState.channel.parentId === CATEGORY_VOICE_ID) {
 
-    const agora = new Date();
-    usersInPoint.set(userId, agora);
+    usersInPoint.set(userId, new Date());
 
     const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
-    if (!logChannel) return;
-
-    const msg = await logChannel.send(
-        `${ICON_PF}  **MEMBRO:** <@${userId}>\n` +
-        `${ICON_PF}  **INÍCIO:** <t:${Math.floor(agora.getTime()/1000)}:t>\n` +
-        `${ICON_PF}  **TÉRMINO:** ~~*EM AÇÃO*~~\n` +
-        `${ICON_PF}  **TOTAL:** 0m`
-    );
-
-    // Guardamos a mensagem para editar depois
-    messagesInPoint.set(userId, msg);
+    if (logChannel) {
+      const msg = await logChannel.send(`${ICON} **MEMBRO:** <@${userId}>\n${ICON} **INÍCIO:** <t:${Math.floor(Date.now()/1000)}:t>\n${ICON} **TÉRMINO:** ~~*EM AÇÃO*~~\n${ICON} **TOTAL:** 0m`);
+      messagesInPoint.set(userId, msg);
     }
+  }
 
-    // Saiu
-    if (oldState.channel && oldState.channel.parentId === CATEGORY_VOICE_ID &&
-        (!newState.channel || newState.channel.parentId !== CATEGORY_VOICE_ID)) {
+  // Saiu da categoria
+  if (oldState.channel && oldState.channel.parentId === CATEGORY_VOICE_ID &&
+      (!newState.channel || newState.channel.parentId !== CATEGORY_VOICE_ID)) {
 
     const entrada = usersInPoint.get(userId);
     if (!entrada) return;
 
     const agora = new Date();
-    const diffMinutos = Math.ceil((agora - entrada) / 1000 / 60);
+    const diffMs = agora - entrada;
+    const minutosTotais = Math.ceil(diffMs / 1000 / 60);
 
-    // Atualiza no Google Sheets
-    await atualizarHorasUsuario(userId, diffMinutos);
+    const totalMin = await atualizarHorasUsuario(userId, minutosTotais);
 
     const msg = messagesInPoint.get(userId);
     if (msg) {
-        const texto =
-        `${ICON_PF} **MEMBRO:** <@${userId}>\n` +
-        `${ICON_PF} **INÍCIO:** <t:${Math.floor(entrada.getTime()/1000)}:t>\n` +
-        `${ICON_PF} **TÉRMINO:** <t:${Math.floor(agora.getTime()/1000)}:t>\n` +
-        `${ICON_PF} **TOTAL:** ${diffMinutos}m\n` +
-        `-# - O ponto foi fechado automaticamente, o membro saiu da call.`;
-
-        await msg.edit({ content: texto });
+      await msg.edit(`${ICON} **MEMBRO:** <@${userId}>\n${ICON} **INÍCIO:** <t:${Math.floor(entrada.getTime()/1000)}:t>\n${ICON} **TÉRMINO:** <t:${Math.floor(agora.getTime()/1000)}:t>\n${ICON} **TOTAL:** ${minutosTotais}m\n-# - O ponto foi fechado automaticamente, o membro saiu da call.`);
     }
 
     usersInPoint.delete(userId);
@@ -63,16 +52,15 @@ export async function voiceStateHandler(client, oldState, newState) {
     // Up automático
     try {
       const usuario = await getUsuario(userId);
-      const cargos = await getCargos();
-      if (!usuario || !cargos.length) return;
+      if (!usuario) return;
 
-      const elegiveis = cargos.filter(c => usuario.minutos >= c.minutos);
+      const elegiveis = metas.filter(c => usuario.minutos >= c.minutos);
       if (elegiveis.length) {
         const newRank = elegiveis.sort((a,b)=>b.minutos - a.minutos)[0];
         const member = await newState.guild.members.fetch(userId);
 
         if (!member.roles.cache.has(newRank.roleId)) {
-          const allRoleIds = cargos.map(c => c.roleId);
+          const allRoleIds = metas.map(c => c.roleId);
           const toRemove = allRoleIds.filter(id => member.roles.cache.has(id));
           if (toRemove.length) await member.roles.remove(toRemove).catch(console.error);
 
@@ -80,11 +68,7 @@ export async function voiceStateHandler(client, oldState, newState) {
 
           const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
           if (logChannel) {
-            const embed = new EmbedBuilder()
-              .setTitle(`${ICON_EMOJI} Promoção Automática`)
-              .setColor(0x32CD32)
-              .setDescription(`Parabéns <@${userId}>! Você foi promovido para **${newRank.nome}** após atingir **${usuario.minutos} minutos**.`);
-            await logChannel.send({ embeds: [embed] });
+            await logChannel.send(`${ICON} Parabéns <@${userId}>! Você foi promovido para **${newRank.nome}** após atingir **${usuario.minutos} minutos**.`);
           }
         }
       }
