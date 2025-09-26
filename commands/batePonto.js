@@ -1,49 +1,97 @@
-import { atualizarHorasUsuario, getUsuariosTodos } from '../utils/sheets.js';
 import { EmbedBuilder } from 'discord.js';
+import { atualizarHorasUsuario, getUsuario, getCargos } from '../utils/sheets.js';
 
+const CATEGORY_VOICE_ID = '1390033257910894599';
+const LOG_CHANNEL_ID = '1390161145037590549';
 const ICON_EMOJI = '<:iconepf:1399436333071728730>';
-const BATE_PONTO_CHANNEL = '1390033258821062760';
-const VOICE_ROLE = '1390033256640024591'; // quem tem permissão
 
-const pontos = new Map(); // userId -> mensagem do ponto
+const usersInPoint = new Map();
+const messagesInPoint = new Map();
 
 export async function voiceStateHandler(client, oldState, newState) {
-    const member = newState.member || oldState.member;
-    if (!member) return;
-    if (!member.roles.cache.has(VOICE_ROLE)) return;
+  const userId = newState.member.user.id;
 
-    // entrou na call
-    if (!oldState.channel && newState.channel) {
-        const startedAt = Date.now();
-        const embed = new EmbedBuilder()
-            .setTitle(`${ICON_EMOJI} BATE-PONTO`)
-            .setDescription('Ponto iniciado!')
-            .addFields(
-                { name: 'MEMBRO', value: `<@${member.id}>`, inline: true },
-                { name: 'INÍCIO', value: `<t:${Math.floor(startedAt / 1000)}:t>`, inline: true },
-                { name: 'TÉRMINO', value: '---', inline: true },
-                { name: 'TOTAL', value: '00:00', inline: true }
-            );
+  // Entrou
+  if ((!oldState.channel || oldState.channel.parentId !== CATEGORY_VOICE_ID) &&
+      newState.channel && newState.channel.parentId === CATEGORY_VOICE_ID) {
 
-        const channel = await client.channels.fetch(BATE_PONTO_CHANNEL);
-        const msg = await channel.send({ embeds: [embed] });
-        pontos.set(member.id, { startedAt, msg });
+    usersInPoint.set(userId, new Date());
+
+    const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
+    if (logChannel) {
+      const embed = new EmbedBuilder()
+        .setTitle(`${ICON_EMOJI} Bate-Ponto Iniciado`)
+        .setColor(0x32CD32)
+        .addFields(
+          { name: 'Membro', value: `<@${userId}>`, inline: true },
+          { name: 'Início', value: `<t:${Math.floor(Date.now()/1000)}:t>`, inline: true },
+          { name: 'Término', value: '~~*EM AÇÃO*~~', inline: true },
+          { name: 'Total', value: '0m', inline: true }
+        );
+
+      const msg = await logChannel.send({ embeds: [embed] });
+      messagesInPoint.set(userId, msg);
+    }
+  }
+
+  // Saiu
+  if (oldState.channel && oldState.channel.parentId === CATEGORY_VOICE_ID &&
+      (!newState.channel || newState.channel.parentId !== CATEGORY_VOICE_ID)) {
+
+    const entrada = usersInPoint.get(userId);
+    if (!entrada) return;
+
+    const agora = new Date();
+    const diffMs = agora - entrada;
+    const minutosTotais = Math.ceil(diffMs / 1000 / 60);
+
+    const totalMin = await atualizarHorasUsuario(userId, minutosTotais);
+
+    const msg = messagesInPoint.get(userId);
+    if (msg) {
+      const embed = new EmbedBuilder(msg.embeds[0].data)
+        .setColor(0xFFD700)
+        .spliceFields(2,2,
+          { name: 'Término', value: `<t:${Math.floor(agora.getTime()/1000)}:t>`, inline: true },
+          { name: 'Total', value: `${minutosTotais}m`, inline: true }
+        )
+        .setFooter({ text: '-# - O ponto foi fechado automaticamente, o membro saiu da call.' });
+      await msg.edit({ embeds: [embed] });
     }
 
-    // saiu da call
-    if (oldState.channel && !newState.channel && pontos.has(member.id)) {
-        const data = pontos.get(member.id);
-        const duration = Math.floor((Date.now() - data.startedAt) / 60000); // minutos
-        await atualizarHorasUsuario(member.id, duration);
+    usersInPoint.delete(userId);
+    messagesInPoint.delete(userId);
 
-        const embed = EmbedBuilder.from(data.msg.embeds[0])
-            .spliceFields(2, 2, 
-                { name: 'TÉRMINO', value: `<t:${Math.floor(Date.now()/1000)}:t>`, inline: true },
-                { name: 'TOTAL', value: `${String(duration).padStart(2,'0')}:00`, inline: true }
-            )
-            .setFooter({ text: '-# - O ponto foi fechado automaticamente, o membro saiu da call.' });
+    // Up automático
+    try {
+      const usuario = await getUsuario(userId);
+      const cargos = await getCargos();
+      if (!usuario || !cargos.length) return;
 
-        await data.msg.edit({ embeds: [embed] });
-        pontos.delete(member.id);
+      const elegiveis = cargos.filter(c => usuario.minutos >= c.minutos);
+      if (elegiveis.length) {
+        const newRank = elegiveis.sort((a,b)=>b.minutos - a.minutos)[0];
+        const member = await newState.guild.members.fetch(userId);
+
+        if (!member.roles.cache.has(newRank.roleId)) {
+          const allRoleIds = cargos.map(c => c.roleId);
+          const toRemove = allRoleIds.filter(id => member.roles.cache.has(id));
+          if (toRemove.length) await member.roles.remove(toRemove).catch(console.error);
+
+          await member.roles.add(newRank.roleId).catch(console.error);
+
+          const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
+          if (logChannel) {
+            const embed = new EmbedBuilder()
+              .setTitle(`${ICON_EMOJI} Promoção Automática`)
+              .setColor(0x32CD32)
+              .setDescription(`Parabéns <@${userId}>! Você foi promovido para **${newRank.nome}** após atingir **${usuario.minutos} minutos**.`);
+            await logChannel.send({ embeds: [embed] });
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Erro no up automático:', err);
     }
+  }
 }

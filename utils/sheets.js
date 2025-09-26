@@ -1,75 +1,107 @@
-import { GoogleSpreadsheet } from 'google-spreadsheet';
 import 'dotenv/config';
+import { google } from 'googleapis';
 
-const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID);
-await doc.useServiceAccountAuth({
-    client_email: process.env.GOOGLE_CLIENT_EMAIL,
-    private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n')
+const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
+const CREDENTIALS = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+
+const auth = new google.auth.GoogleAuth({
+  credentials: CREDENTIALS,
+  scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
-await doc.loadInfo();
 
-const usuariosSheet = doc.sheetsByTitle['usuarios'];
-const metasSheet = doc.sheetsByTitle['metas'];
-const cargosSheet = doc.sheetsByTitle['cargos'];
+const sheets = google.sheets({ version: 'v4', auth });
 
-// Registrar novo usuário
+// Converte valores da planilha para minutos
+function parseToMinutes(value) {
+  const s = String(value || '').trim();
+  if (!s) return 0;
+  if (!isNaN(s)) return Math.round(parseFloat(s) * 60); // assume decimal horas
+  return 0;
+}
+
 export async function registrarUsuario(userId, nome, idJogo, login) {
-    await usuariosSheet.loadCells('A:F');
-    const rows = await usuariosSheet.getRows();
-    const existing = rows.find(r => r.id_discord === userId);
-    if (existing) return; // não duplica
-
-    await usuariosSheet.addRow({
-        id_discord: userId,
-        nome,
-        id_em_jogo: idJogo,
-        login,
-        advertencia: 0,
-        minutos: 0
+  try {
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'usuarios!A:F',
+      valueInputOption: 'RAW',
+      requestBody: { values: [[userId, nome, idJogo, login, 0, 0]] }
     });
+  } catch (err) {
+    console.error('Erro ao registrar usuário:', err);
+  }
 }
 
-// Pegar todos os usuários
+export async function atualizarHorasUsuario(userId, minutosAdicionados) {
+  try {
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'usuarios!A:F'
+    });
+    const values = res.data.values || [];
+    const rowIndex = values.findIndex(r => r[0] === userId);
+    if (rowIndex === -1) return null;
+
+    const atual = parseInt(values[rowIndex][5] || '0', 10);
+    const total = atual + minutosAdicionados;
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `usuarios!F${rowIndex + 1}`,
+      valueInputOption: 'RAW',
+      requestBody: { values: [[String(total)]] }
+    });
+
+    return total;
+  } catch (err) {
+    console.error('Erro ao atualizar horas:', err);
+    return null;
+  }
+}
+
+export async function getUsuario(userId) {
+  try {
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'usuarios!A:F'
+    });
+    const values = res.data.values || [];
+    const row = values.find(r => r[0] === userId);
+    if (!row) return null;
+    return { userId: row[0], nome: row[1], idJogo: row[2], login: row[3], minutos: parseInt(row[5] || '0', 10) };
+  } catch (err) {
+    console.error('Erro ao buscar usuário:', err);
+    return null;
+  }
+}
+
 export async function getUsuariosTodos() {
-    await usuariosSheet.loadCells('A:F');
-    const rows = await usuariosSheet.getRows();
-    return rows.map(r => ({
-        userId: r.id_discord,
-        nome: r.nome,
-        idJogo: r.id_em_jogo,
-        login: r.login,
-        totalMinutes: parseInt(r.minutos, 10) || 0
-    }));
+  try {
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'usuarios!A:F'
+    });
+    return res.data.values?.map(r => ({ userId: r[0], nome: r[1], idJogo: r[2], login: r[3], minutos: parseInt(r[5] || '0', 10) })) || [];
+  } catch (err) {
+    console.error('Erro ao buscar usuários:', err);
+    return [];
+  }
 }
 
-// Atualizar minutos de um usuário
-export async function atualizarHorasUsuario(userId, minutos) {
-    const rows = await usuariosSheet.getRows();
-    const userRow = rows.find(r => r.id_discord === userId);
-    if (!userRow) return false;
-    userRow.minutos = parseInt(userRow.minutos || 0) + minutos;
-    await userRow.save();
-    return true;
-}
-
-// Setar horas de um usuário (para remover/zerar)
-export async function setHorasUsuario(userId, minutos) {
-    const rows = await usuariosSheet.getRows();
-    const userRow = rows.find(r => r.id_discord === userId);
-    if (!userRow) return false;
-    userRow.minutos = minutos;
-    await userRow.save();
-    return true;
-}
-
-// Buscar cargos
 export async function getCargos() {
-    const rows = await cargosSheet.getRows();
-    return rows.map(r => ({ nome: r.nome, cargoId: r.cargo_id }));
-}
-
-// Buscar metas
-export async function getMetas() {
-    const rows = await metasSheet.getRows();
-    return rows.map(r => ({ nome: r.nome, minutos: parseInt(r.minutos, 10) || 0 }));
+  try {
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'cargos!A:C'
+    });
+    const rows = res.data.values || [];
+    return rows.slice(1).map(r => ({
+      nome: r[0],
+      roleId: r[1],
+      minutos: Math.round(parseFloat(r[2] || '0') * 60)
+    }));
+  } catch (err) {
+    console.error('Erro ao buscar cargos:', err);
+    return [];
+  }
 }
