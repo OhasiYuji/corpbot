@@ -34,9 +34,9 @@ export async function voiceStateHandler(client, oldState, newState) {
     }
   }
 
-  // Saiu
-  if (oldState.channel && oldState.channel.parentId === CATEGORY_VOICE_ID &&
-      (!newState.channel || newState.channel.parentId !== CATEGORY_VOICE_ID)) {
+    // Saiu
+    if (oldState.channel && oldState.channel.parentId === CATEGORY_VOICE_ID &&
+        (!newState.channel || newState.channel.parentId !== CATEGORY_VOICE_ID)) {
 
     const entrada = usersInPoint.get(userId);
     if (!entrada) return;
@@ -49,14 +49,19 @@ export async function voiceStateHandler(client, oldState, newState) {
 
     const msg = messagesInPoint.get(userId);
     if (msg) {
-      const embed = new EmbedBuilder(msg.embeds[0].data)
+        // Pega os dados originais do embed e atualiza corretamente
+        const embed = new EmbedBuilder()
+        .setTitle(`${ICON_EMOJI} Bate-Ponto Finalizado`) // ALTEREI O TÍTULO
         .setColor(0xFFD700)
-        .spliceFields(2,2,
-          { name: 'Término', value: `<t:${Math.floor(agora.getTime()/1000)}:t>`, inline: true },
-          { name: 'Total', value: `${minutosTotais}m`, inline: true }
+        .addFields(
+            { name: 'Membro', value: `<@${userId}>`, inline: true },
+            { name: 'Início', value: `<t:${Math.floor(entrada.getTime()/1000)}:t>`, inline: true },
+            { name: 'Término', value: `<t:${Math.floor(agora.getTime()/1000)}:t>`, inline: true },
+            { name: 'Total', value: `${minutosTotais}m`, inline: true }
         )
-        .setFooter({ text: '-# - O ponto foi fechado automaticamente, o membro saiu da call.' });
-      await msg.edit({ embeds: [embed] });
+        .setFooter({ text: '- O ponto foi fechado automaticamente, o membro saiu da call.' });
+
+        await msg.edit({ embeds: [embed] });
     }
 
     usersInPoint.delete(userId);
