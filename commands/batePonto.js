@@ -47,11 +47,11 @@ export async function voiceStateHandler(client, oldState, newState) {
 
     const msg = messagesInPoint.get(userId);
     if (msg) {
-        const texto = 
-        `:Policiafederallogo:  **MEMBRO:** <@${userId}>\n` +
-        `:Policiafederallogo:  **INÍCIO:** <t:${Math.floor(entrada.getTime()/1000)}:t>\n` +
-        `:Policiafederallogo:  **TÉRMINO:** <t:${Math.floor(agora.getTime()/1000)}:t>\n` +
-        `:Policiafederallogo:  **TOTAL:** ${diffMinutos}m\n` +
+        const texto =
+        `${ICON_PF} **MEMBRO:** <@${userId}>\n` +
+        `${ICON_PF} **INÍCIO:** <t:${Math.floor(entrada.getTime()/1000)}:t>\n` +
+        `${ICON_PF} **TÉRMINO:** <t:${Math.floor(agora.getTime()/1000)}:t>\n` +
+        `${ICON_PF} **TOTAL:** ${diffMinutos}m\n` +
         `-# - O ponto foi fechado automaticamente, o membro saiu da call.`;
 
         await msg.edit({ content: texto });
