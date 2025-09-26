@@ -61,38 +61,5 @@ ${ICON} **TOTAL:** ${minutosTotais}m
 
     usersInPoint.delete(userId);
     messagesInPoint.delete(userId);
-
-    // up automático usando metas do JSON
-    try {
-      const usuario = await getUsuario(userId);
-      const cargos = getCargos();
-      if (!usuario || !Array.isArray(cargos) || !cargos.length) return;
-
-      // use novoTotal (total acumulado) to decide promotions
-      const elegiveis = cargos.filter(c => (novoTotal || 0) >= (c.minutos || 0));
-      if (!elegiveis.length) return;
-
-      const newRank = elegiveis.sort((a,b) => (b.minutos || 0) - (a.minutos || 0))[0];
-      const guild = newState.guild || oldState.guild;
-      if (!guild) return;
-
-      const guildMember = await guild.members.fetch(userId).catch(() => null);
-      if (!guildMember) return;
-
-      if (!guildMember.roles.cache.has(newRank.roleId)) {
-        const allRoleIds = cargos.map(c => c.roleId).filter(Boolean);
-        const toRemove = allRoleIds.filter(rid => guildMember.roles.cache.has(rid));
-        if (toRemove.length) await guildMember.roles.remove(toRemove).catch(console.error);
-        await guildMember.roles.add(newRank.roleId).catch(console.error);
-
-        const logChannel = await client.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
-        if (logChannel) {
-          await logChannel.send(`${ICON} **PROMOÇÃO AUTOMÁTICA**
-Parabéns <@${userId}>! Você foi promovido para **${newRank.nome}** após atingir **${novoTotal} minutos**.`).catch(console.error);
-        }
-      }
-    } catch (err) {
-      console.error('Erro up automatico:', err);
-    }
   }
 }
