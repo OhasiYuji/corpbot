@@ -3,7 +3,7 @@ import { Client, GatewayIntentBits, Partials } from 'discord.js';
 import { registroHandler } from './commands/registro.js';
 import { voiceStateHandler } from './commands/batePonto.js';
 import { formularioHandler, enviarPainelFormulario } from './commands/formulario.js';
-import { sendPainelHoras, painelHorasHandler } from './commands/painelHoras.js'; // <--- import painel de horas
+import { sendPainelHoras, painelHorasHandler } from './commands/painelHoras.js';
 
 const client = new Client({
     intents: [
@@ -16,7 +16,6 @@ const client = new Client({
     partials: [Partials.Channel]
 });
 
-// Evento: pronto
 client.once('ready', async () => {
     console.log(`Bot logado como ${client.user.tag}`);
 
@@ -30,30 +29,22 @@ client.once('ready', async () => {
     // Enviar painel de formulário
     await enviarPainelFormulario(client);
 
-    // Enviar painel de horas (admin)
+    // Enviar painel de horas
     await sendPainelHoras(client);
 
     console.log('Painéis enviados!');
 });
 
-// Evento: interação (botão e modal)
 client.on('interactionCreate', async (interaction) => {
     try {
-        // Registro
         await registroHandler(client, interaction);
-
-        // Formulário
         await formularioHandler(client, interaction);
-
-        // Painel de horas
         await painelHorasHandler(client, interaction);
-
     } catch (err) {
         console.error('Erro ao processar interação:', err);
     }
 });
 
-// Evento: estado de voz (bate-ponto)
 client.on('voiceStateUpdate', async (oldState, newState) => {
     try {
         await voiceStateHandler(client, oldState, newState);
