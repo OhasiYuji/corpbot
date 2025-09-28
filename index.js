@@ -4,7 +4,6 @@ import { Client, GatewayIntentBits, Partials } from 'discord.js';
 import { registroHandler, sendRegistroPanel } from './commands/registro.js';
 import { painelHorasHandler, sendPainelHoras } from './commands/painelHoras.js';
 import { voiceStateHandler } from './commands/batePonto.js';
-import { formularioHandler, enviarPainelFormulario } from './commands/formulario.js';
 
 const client = new Client({
   intents: [
@@ -17,31 +16,34 @@ const client = new Client({
   partials: [Partials.Channel]
 });
 
+// helper para limpar canal e mandar painel
+async function resetChannelAndSend(sendFn, client) {
+  try {
+    const msg = await sendFn(client);
+    if (!msg) return;
+
+    const channel = msg.channel;
+    await channel.bulkDelete(50).catch(() => null); // apaga últimas 50 msgs
+    await sendFn(client); // envia novamente painel
+  } catch (err) {
+    console.error('Erro ao resetar canal:', err);
+  }
+}
+
 client.once('ready', async () => {
   console.log(`Bot logado como ${client.user.tag}`);
 
-  // Reenvia paineis (falha silenciosa se canal não existir)
-  await sendRegistroPanel(client).catch(() => null);
-  await sendPainelHoras(client).catch(() => null);
-  await enviarPainelFormulario(client).catch(() => null);
+  // Reenvia painéis (limpando canal antes)
+  await resetChannelAndSend(sendRegistroPanel, client);
+  await resetChannelAndSend(sendPainelHoras, client);
 
-  console.log('Paineis (tentativa) enviados.');
+  console.log('Paineis resetados.');
 });
 
 client.on('interactionCreate', async (interaction) => {
   try {
-    // 1️⃣ Formulário
-    await formularioHandler(client, interaction);
-
-    // 2️⃣ Registro
     await registroHandler(client, interaction);
-
-    // 3️⃣ Painel de Horas
-    const painelIds = ['consultar_horas','adicionar_horas','remover_horas','limpar_horas','up_automatico'];
-    if (interaction.isButton() && painelIds.includes(interaction.customId)) {
-      await painelHorasHandler(client, interaction);
-    }
-
+    await painelHorasHandler(client, interaction);
   } catch (err) {
     console.error('Erro ao processar interação:', err);
     try {
@@ -50,7 +52,7 @@ client.on('interactionCreate', async (interaction) => {
       } else {
         await interaction.editReply({ content: 'Erro interno.' });
       }
-    } catch (e) { /* ignore */ }
+    } catch { /* ignore */ }
   }
 });
 
