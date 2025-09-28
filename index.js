@@ -1,8 +1,8 @@
-// index.js
 import 'dotenv/config';
 import { Client, GatewayIntentBits, Partials } from 'discord.js';
 import { registroHandler, sendRegistroPanel } from './commands/registro.js';
 import { painelHorasHandler, sendPainelHoras } from './commands/painelHoras.js';
+import { formularioHandler, enviarPainelFormulario } from './commands/formulario.js';
 import { voiceStateHandler } from './commands/batePonto.js';
 
 const client = new Client({
@@ -16,34 +16,23 @@ const client = new Client({
   partials: [Partials.Channel]
 });
 
-// helper para limpar canal e mandar painel
-async function resetChannelAndSend(sendFn, client) {
-  try {
-    const msg = await sendFn(client);
-    if (!msg) return;
-
-    const channel = msg.channel;
-    await channel.bulkDelete(50).catch(() => null); // apaga últimas 50 msgs
-    await sendFn(client); // envia novamente painel
-  } catch (err) {
-    console.error('Erro ao resetar canal:', err);
-  }
-}
-
 client.once('ready', async () => {
   console.log(`Bot logado como ${client.user.tag}`);
 
-  // Reenvia painéis (limpando canal antes)
-  await resetChannelAndSend(sendRegistroPanel, client);
-  await resetChannelAndSend(sendPainelHoras, client);
+  // enviar todos os painéis
+  await sendRegistroPanel(client).catch(()=>null);
+  await sendPainelHoras(client).catch(()=>null);
+  await enviarPainelFormulario(client).catch(()=>null);
 
-  console.log('Paineis resetados.');
+  console.log('Todos os painéis enviados (registro, horas e formulário).');
 });
 
+// Interações (botões, modais, etc)
 client.on('interactionCreate', async (interaction) => {
   try {
     await registroHandler(client, interaction);
     await painelHorasHandler(client, interaction);
+    await formularioHandler(client, interaction);
   } catch (err) {
     console.error('Erro ao processar interação:', err);
     try {
@@ -52,10 +41,11 @@ client.on('interactionCreate', async (interaction) => {
       } else {
         await interaction.editReply({ content: 'Erro interno.' });
       }
-    } catch { /* ignore */ }
+    } catch {}
   }
 });
 
+// Bate-ponto (voiceStateUpdate)
 client.on('voiceStateUpdate', async (oldState, newState) => {
   try {
     await voiceStateHandler(client, oldState, newState);
