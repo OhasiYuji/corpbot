@@ -7,8 +7,7 @@ import {
     TextInputBuilder,
     TextInputStyle,
     EmbedBuilder,
-    InteractionType,
-    PermissionsBitField
+    InteractionType
 } from 'discord.js';
 
 const FORM_CHANNEL_ID = '1390033258309357577'; // Canal público do botão
@@ -71,32 +70,36 @@ export async function enviarPainelFormulario(client) {
 // Handler do formulário
 export async function formularioHandler(client, interaction) {
     try {
-        // Clique no botão para abrir formulário
+        // ----------------------------
+        // BOTÃO: Iniciar formulário
+        // ----------------------------
         if (interaction.isButton() && interaction.customId === 'start_form') {
-            // Criar modal
             const modal = new ModalBuilder()
                 .setCustomId(`form_modal_${interaction.user.id}`)
                 .setTitle('Formulário de Recrutamento');
 
-            // Adicionar campos do modal (discord permite 5 por modal, então vamos dividir)
+            // Adiciona até 5 perguntas por modal
             for (let i = 0; i < 5 && i < QUESTIONS.length; i++) {
                 const input = new TextInputBuilder()
                     .setCustomId(`q_${i}`)
                     .setLabel(QUESTIONS[i])
                     .setStyle(TextInputStyle.Paragraph)
                     .setRequired(true);
+
                 modal.addComponents(new ActionRowBuilder().addComponents(input));
             }
 
             await interaction.showModal(modal);
+            return; // evita cair em outros ifs
         }
 
-        // Receber modal submit
+        // ----------------------------
+        // SUBMISSÃO DO MODAL
+        // ----------------------------
         if (interaction.type === InteractionType.ModalSubmit && interaction.customId.startsWith('form_modal_')) {
             const targetUserId = interaction.user.id;
             const responses = [];
 
-            // Coletar respostas do modal
             Object.keys(interaction.fields.fields).forEach((key, index) => {
                 const answer = interaction.fields.getTextInputValue(key);
                 responses.push({ question: QUESTIONS[index], answer });
@@ -111,7 +114,6 @@ export async function formularioHandler(client, interaction) {
                 embedResponses.addFields({ name: resp.question, value: resp.answer });
             });
 
-            // Botões de aprovação/reprovação
             const row = new ActionRowBuilder()
                 .addComponents(
                     new ButtonBuilder()
@@ -128,9 +130,12 @@ export async function formularioHandler(client, interaction) {
             await responseChannel.send({ embeds: [embedResponses], components: [row] });
 
             await interaction.reply({ content: 'Formulário enviado! Aguarde a aprovação/reprovação.', ephemeral: true });
+            return;
         }
 
-        // Aprovar
+        // ----------------------------
+        // BOTÃO: Aprovar formulário
+        // ----------------------------
         if (interaction.isButton() && interaction.customId.startsWith('approve_')) {
             if (!interaction.member.roles.cache.has(RECRUITER_ROLE_ID))
                 return interaction.reply({ content: 'Você não tem permissão.', ephemeral: true });
@@ -148,8 +153,7 @@ export async function formularioHandler(client, interaction) {
             const approvedChannel = await client.channels.fetch(APPROVED_CHANNEL_ID);
             const embedApproved = new EmbedBuilder()
                 .setTitle(`${ICON_PF} Formulário Aprovado`)
-                .setDescription(`
-Olá ${member}, parabéns! Você foi aprovado no formulário.
+                .setDescription(`Olá ${member}, parabéns! Você foi aprovado no formulário.
 
 📝 **Próximos passos:**
 • Faça o seu **registro** no canal: <#${PANEL_CHANNEL_ID}>
@@ -160,9 +164,12 @@ Olá ${member}, parabéns! Você foi aprovado no formulário.
                 .setFooter({ text: 'Polícia Federal - DRP' });
 
             await approvedChannel.send({ content: `${member}`, embeds: [embedApproved] });
+            return;
         }
 
-        // Reprovar
+        // ----------------------------
+        // BOTÃO: Reprovar formulário
+        // ----------------------------
         if (interaction.isButton() && interaction.customId.startsWith('reject_')) {
             if (!interaction.member.roles.cache.has(RECRUITER_ROLE_ID))
                 return interaction.reply({ content: 'Você não tem permissão.', ephemeral: true });
@@ -176,8 +183,7 @@ Olá ${member}, parabéns! Você foi aprovado no formulário.
             const rejectedChannel = await client.channels.fetch(APPROVED_CHANNEL_ID);
             const embedRejected = new EmbedBuilder()
                 .setTitle(`${ICON_PF} Formulário Reprovado`)
-                .setDescription(`
-Olá ${member}, infelizmente suas respostas estavam incorretas.  
+                .setDescription(`Olá ${member}, infelizmente suas respostas estavam incorretas.  
 
 📌 **Próximos passos:**
 • Leia atentamente as regras no site:  
@@ -188,6 +194,7 @@ Olá ${member}, infelizmente suas respostas estavam incorretas.
                 .setFooter({ text: 'Polícia Federal - DRP' });
 
             await rejectedChannel.send({ content: `${member}`, embeds: [embedRejected] });
+            return;
         }
 
     } catch (err) {
