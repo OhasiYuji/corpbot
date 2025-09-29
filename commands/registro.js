@@ -8,13 +8,13 @@ import {
     InteractionType,
     EmbedBuilder
 } from 'discord.js';
-import { registrarUsuario } from '../utils/sheets.js';
+import { registrarUsuario } from '../utils/sheets.js'; 
 
 // Constantes
 const PANEL_CHANNEL_ID = process.env.REGISTER_PANEL_CHANNEL_ID || '1396852912709308426';
 const LOG_CHANNEL_ID = '1390033258821062760'; // Canal que recebe a notificação de registro
 const ICON = '<:Policiafederallogo:1399436333071728730>';
-const ICON_PF = '<:iconepf:1399436333071728730>'; // Assumindo este é o ícone da PF que você está usando
+const ICON_PF = '<:iconepf:1399436333071728730>'; 
 
 /**
  * Envia o painel inicial de registro, limpando o canal antes para evitar duplicidade.
@@ -47,7 +47,7 @@ export async function sendRegistroPanel(client) {
 }
 
 /**
- * Envia uma mensagem de log formatada para o canal de LOG (1390033258821062760).
+ * Envia uma mensagem de log formatada para o canal de LOG.
  */
 async function sendRegistroLog(client, user, nome, idJogo, login) {
     const logChannel = await client.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
@@ -55,7 +55,7 @@ async function sendRegistroLog(client, user, nome, idJogo, login) {
 
     const tag = "DPF - DRP"; 
 
-    // Mensagem formatada exatamente como você pediu
+    // Mensagem formatada com as variáveis corretas
     const logMessage = 
         `${ICON_PF} **NOME:** <@${user.id}>\n` +
         `${ICON_PF} **NICKNAME:** ${nome}\n` +
@@ -112,19 +112,20 @@ export async function registroHandler(client, interaction) {
             const idJogo = interaction.fields.getTextInputValue('id_jogo');
             const login = interaction.fields.getTextInputValue('login');
 
+            // 1. REGISTRO NA PLANILHA (MANTIDO)
             const result = await registrarUsuario(interaction.user.id, nome, idJogo, login);
             
             if (!result) {
-                // Usuário já registrado
                 return interaction.editReply({ content: 'Você já está registrado.' });
             }
 
+            // 2. ALTERAÇÃO DO APELIDO (MANTIDO)
             try {
-                // Tenta definir o apelido do usuário
+                // Padrão: DPF » [Nickname] ([ID do Jogo])
                 await interaction.member.setNickname(`DPF » ${nome} (${idJogo})`).catch(() => null);
             } catch {}
 
-            // Envio do log formatado
+            // 3. Envio do log formatado
             await sendRegistroLog(client, interaction.user, nome, idJogo, login); 
 
             return interaction.editReply({ content: 'Registro realizado com sucesso! ✅' });

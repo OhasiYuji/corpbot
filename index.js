@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { Client, GatewayIntentBits, Partials } from 'discord.js';
+import { Client, GatewayIntentBits, Partials, InteractionType } from 'discord.js';
 import { registroHandler, sendRegistroPanel } from './commands/registro.js';
 import { painelHorasHandler, sendPainelHoras } from './commands/painelHoras.js';
 import { formularioHandler, enviarPainelFormulario } from './commands/formulario.js';
@@ -25,55 +25,62 @@ client.once('ready', async () => {
 });
 
 client.on('interactionCreate', async (interaction) => {
-    // Se for um botão (ButtonInteraction), verificamos o customId para direcionar ao handler correto.
-    if (interaction.isButton()) {
-        const customId = interaction.customId;
-
-        // Se o ID for do formulário, direciona para o handler de formulário.
-        if (customId === 'start_form' || customId.startsWith('form_')) {
-            await safeHandle(formularioHandler, client, interaction);
-            return;
-        }
-
-        // Adicione outras verificações para outros comandos aqui, se necessário.
-        // Exemplo: if (customId.startsWith('registro_')) { ... }
-    }
-
-    // Chama os handlers existentes (é mais seguro chamar todos no seu caso atual, mas o ideal é filtrar)
+    // A interação será roteada para apenas um handler, evitando conflitos de resposta.
     try {
-        await registroHandler(client, interaction);
-        await painelHorasHandler(client, interaction);
-        await formularioHandler(client, interaction);
+        if (interaction.isButton()) {
+            const customId = interaction.customId;
+
+            // Roteamento para Formulário
+            if (customId === 'start_form' || customId.startsWith('form_')) {
+                await formularioHandler(client, interaction);
+                return; 
+            }
+            
+            // Roteamento para Registro (Botão 'Abrir Formulário')
+            if (customId === 'open_modal_registro') {
+                await registroHandler(client, interaction);
+                return;
+            }
+
+            // Roteamento para Painel de Horas (adicione IDs específicos se houver botões)
+            // if (customId.startsWith('horas_')) {
+            //     await painelHorasHandler(client, interaction);
+            //     return;
+            // }
+
+        } else if (interaction.type === InteractionType.ModalSubmit) {
+            const customId = interaction.customId;
+
+            // Roteamento para Registro (Submissão do Modal)
+            if (customId === 'modal_registro') {
+                await registroHandler(client, interaction);
+                return;
+            }
+            // Adicione roteamento para outros modais aqui, se houver.
+        }
+        
+        // Chamada de fallback para painelHorasHandler.
+        // Se o seu painelHorasHandler lida com comandos de barra, ou outras interações
+        // que não foram capturadas acima, ele ainda será chamado aqui.
+        await painelHorasHandler(client, interaction); 
+
     } catch (err) {
-        // O bloco de erro original já está ok.
-        console.error('Erro ao processar interação:', err);
+        // Bloco de erro aprimorado para lidar com interações que falharam em qualquer estágio.
+        console.error('Erro fatal ao processar interação:', err);
         try {
             if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ content: 'Erro interno.', flags: 64 });
-            } else {
-                await interaction.editReply({ content: 'Erro interno.' });
+                // Tenta responder de forma efêmera se a interação não foi reconhecida
+                await interaction.reply({ content: 'Erro interno ao processar sua solicitação.', ephemeral: true });
+            } else if (interaction.deferred) {
+                // Se o bot já enviou "pensando...", edita a mensagem
+                await interaction.editReply({ content: 'Ocorreu um erro interno após o processamento.' });
             }
-        } catch (e) { /* ignore */ }
+        } catch (e) { 
+             console.error('Erro ao enviar mensagem de erro:', e);
+        }
     }
 });
 
-/**
- * Função utilitária para chamar handlers de forma segura, se você quiser adotar uma abordagem mais filtrada.
- */
-async function safeHandle(handler, client, interaction) {
-    try {
-        await handler(client, interaction);
-    } catch (err) {
-        console.error(`Erro no handler ${handler.name}:`, err);
-        try {
-            if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ content: 'Erro interno.', flags: 64 });
-            } else {
-                await interaction.editReply({ content: 'Erro interno.' });
-            }
-        } catch (e) { /* ignore */ }
-    }
-}
-
+// A função utilitária safeHandle foi removida pois o novo sistema de roteamento já é seguro.
 
 client.login(process.env.TOKEN);
