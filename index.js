@@ -3,6 +3,11 @@ import { Client, GatewayIntentBits, Partials, InteractionType } from 'discord.js
 import { registroHandler, sendRegistroPanel } from './commands/registro.js';
 import { painelHorasHandler, sendPainelHoras } from './commands/painelHoras.js';
 import { formularioHandler, enviarPainelFormulario } from './commands/formulario.js';
+// ----------------------------------------------------
+// IMPORTAÇÃO CORRIGIDA: Importe o handler do ponto
+import { voiceStateHandler } from './voiceState.js'; // Ajuste o caminho se o arquivo não se chamar 'voiceState.js'
+// ----------------------------------------------------
+
 
 const client = new Client({
     intents: [
@@ -10,7 +15,8 @@ const client = new Client({
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildVoiceStates
+        // INTENTO CORRETO: Este intent é essencial e já está presente
+        GatewayIntentBits.GuildVoiceStates 
     ],
     partials: [Partials.Channel]
 });
@@ -23,6 +29,14 @@ client.once('ready', async () => {
     await enviarPainelFormulario(client).catch(() => null);
     console.log('Paineis enviados.');
 });
+
+// ----------------------------------------------------
+// ADIÇÃO CRUCIAL: Ouvinte para o evento de mudança de voz
+client.on('voiceStateUpdate', (oldState, newState) => {
+    voiceStateHandler(client, oldState, newState);
+});
+// ----------------------------------------------------
+
 
 client.on('interactionCreate', async (interaction) => {
     // A interação será roteada para apenas um handler, evitando conflitos de resposta.
@@ -42,11 +56,7 @@ client.on('interactionCreate', async (interaction) => {
                 return;
             }
 
-            // Roteamento para Painel de Horas (adicione IDs específicos se houver botões)
-            // if (customId.startsWith('horas_')) {
-            //     await painelHorasHandler(client, interaction);
-            //     return;
-            // }
+            // O seu roteamento de painelHoras...
 
         } else if (interaction.type === InteractionType.ModalSubmit) {
             const customId = interaction.customId;
@@ -60,12 +70,10 @@ client.on('interactionCreate', async (interaction) => {
         }
         
         // Chamada de fallback para painelHorasHandler.
-        // Se o seu painelHorasHandler lida com comandos de barra, ou outras interações
-        // que não foram capturadas acima, ele ainda será chamado aqui.
         await painelHorasHandler(client, interaction); 
 
     } catch (err) {
-        // Bloco de erro aprimorado para lidar com interações que falharam em qualquer estágio.
+        // Bloco de erro aprimorado
         console.error('Erro fatal ao processar interação:', err);
         try {
             if (!interaction.replied && !interaction.deferred) {
@@ -76,11 +84,10 @@ client.on('interactionCreate', async (interaction) => {
                 await interaction.editReply({ content: 'Ocorreu um erro interno após o processamento.' });
             }
         } catch (e) { 
-             console.error('Erro ao enviar mensagem de erro:', e);
+            console.error('Erro ao enviar mensagem de erro:', e);
         }
     }
 });
 
-// A função utilitária safeHandle foi removida pois o novo sistema de roteamento já é seguro.
 
 client.login(process.env.TOKEN);
