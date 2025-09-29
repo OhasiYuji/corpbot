@@ -4,11 +4,10 @@ import {
     ButtonBuilder,
     ButtonStyle,
     EmbedBuilder,
-    PermissionsBitField,
-    InteractionType
+    PermissionsBitField
 } from 'discord.js';
 
-const FORM_CHANNEL_ID = '1390033258309357577';
+const FORM_CHANNEL_ID = '1390033258309357577'; // canal público para o botão
 const PANEL_CHANNEL_ID = '1396852912709308426';
 const TUTORIAL = '1390033257533542410';
 const ICON_PF = '<:iconepf:1399436333071728730>';
@@ -73,8 +72,8 @@ export async function formularioHandler(client, interaction) {
         if (interaction.customId === 'start_form') {
             const guild = interaction.guild;
 
-            // Cria canal temporário
-            const channel = await guild.channels.create({
+            // Cria canal temporário privado
+            const tempChannel = await guild.channels.create({
                 name: `formulario-${interaction.user.username}`,
                 type: 0, // GuildText
                 parent: FORM_CATEGORY_ID,
@@ -98,7 +97,7 @@ export async function formularioHandler(client, interaction) {
                 ]
             });
 
-            await interaction.reply({ content: `Seu canal de formulário foi criado: ${channel}`, ephemeral: true });
+            await interaction.reply({ content: `Seu canal de formulário foi criado: ${tempChannel}`, ephemeral: true });
 
             // Coletar respostas
             const responses = [];
@@ -108,15 +107,15 @@ export async function formularioHandler(client, interaction) {
                     .setDescription(question)
                     .setColor(0xFFD700);
 
-                await channel.send({ embeds: [embed] });
+                await tempChannel.send({ embeds: [embed] });
 
                 const filter = m => m.author.id === interaction.user.id;
-                const collected = await channel.awaitMessages({ filter, max: 1, time: 600000, errors: ['time'] });
+                const collected = await tempChannel.awaitMessages({ filter, max: 1, time: 600000, errors: ['time'] });
                 const answer = collected.first().content;
                 responses.push({ question, answer });
             }
 
-            // Enviar respostas para o canal de revisão
+            // Enviar respostas para revisão
             const embedResponses = new EmbedBuilder()
                 .setTitle(`Formulário de ${interaction.user.tag}`)
                 .setColor(0xFFD700);
@@ -140,12 +139,7 @@ export async function formularioHandler(client, interaction) {
             const responseChannel = await client.channels.fetch(RESPONSES_CHANNEL_ID);
             await responseChannel.send({ embeds: [embedResponses], components: [row] });
 
-            await channel.send('Formulário enviado! Aguarde a aprovação/reprovação.');
-
-            // Deleta o canal temporário depois de 10s
-            setTimeout(() => {
-                channel.delete().catch(console.error);
-            }, 10000);
+            await tempChannel.send('Formulário enviado! Aguarde a aprovação/reprovação.');
         }
 
         // Aprovar
@@ -194,7 +188,6 @@ Olá ${member}, parabéns! Você foi aprovado no formulário.
             await interaction.update({ content: 'Reprovado!', components: [], embeds: [] });
 
             const rejectedChannel = await client.channels.fetch(APPROVED_CHANNEL_ID);
-
             const embedRejected = new EmbedBuilder()
                 .setTitle(`${ICON_PF} Formulário Reprovado`)
                 .setDescription(`
@@ -214,7 +207,7 @@ Olá ${member}, infelizmente suas respostas estavam incorretas.
     } catch (err) {
         console.error('Erro ao processar interação:', err);
         if (!interaction.replied && !interaction.deferred) {
-            await interaction.reply({ content: 'Erro interno no formulário.', ephemeral: true }).catch(()=>null);
+            await interaction.reply({ content: 'Erro interno no formulário.', ephemeral: true }).catch(() => null);
         }
     }
 }
