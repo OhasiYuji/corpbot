@@ -255,9 +255,20 @@ export async function formularioHandler(client, interaction) {
         const logChannel = await client.channels.fetch(APPROVED_CHANNEL_ID).catch(() => null);
         
         if (logChannel) {
+            
+            let descriptionText = `O formulário de **${member ? member.user.tag : userId}** (<@${userId}>) foi processado.`;
+
+            // ADIÇÃO: Instruções para os próximos passos (somente se aprovado)
+            if (isApproved) {
+                descriptionText += `\n\n**PRÓXIMOS PASSOS:**`;
+                descriptionText += `\n1. Registre-se no canal: <#1396852912709308426>`;
+                descriptionText += `\n2. Solicite sua tag no canal: <#1399875114660532244>`;
+            }
+            // FIM DA ADIÇÃO
+
             const logEmbed = new EmbedBuilder()
                 .setTitle(`${statusIcon} Candidato ${action}`)
-                .setDescription(`O formulário de **${member ? member.user.tag : userId}** (<@${userId}>) foi processado.`)
+                .setDescription(descriptionText) // Usa a nova descrição
                 .addFields(
                     { name: 'Status', value: `**${action}**`, inline: true },
                     { name: 'Recrutador', value: `<@${interaction.user.id}>`, inline: true }
