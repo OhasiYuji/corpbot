@@ -1,8 +1,9 @@
+// index.js
 import 'dotenv/config';
 import { Client, GatewayIntentBits, Partials } from 'discord.js';
-import { registroHandler } from './commands/registro.js';
-import { painelHorasHandler } from './commands/painelHoras.js';
-import { formularioHandler } from './commands/formulario.js';
+import { registroHandler, sendRegistroPanel } from './commands/registro.js';
+import { painelHorasHandler, sendPainelHoras } from './commands/painelHoras.js';
+import { formularioHandler, enviarPainelFormulario } from './commands/formulario.js';
 import { voiceStateHandler } from './commands/batePonto.js';
 
 const client = new Client({
@@ -16,59 +17,35 @@ const client = new Client({
   partials: [Partials.Channel]
 });
 
-client.once('ready', () => {
+client.once('ready', async () => {
   console.log(`Bot logado como ${client.user.tag}`);
+
+  // Envia paineis
+  await sendRegistroPanel(client).catch(()=>null);
+  await sendPainelHoras(client).catch(()=>null);
+  await enviarPainelFormulario(client).catch(()=>null);
+
+  console.log('Paineis enviados.');
 });
 
-// ===== Interação: Registro =====
 client.on('interactionCreate', async (interaction) => {
   try {
+    // Delegar para handlers específicos
     await registroHandler(client, interaction);
-  } catch (err) {
-    console.error('Erro no registroHandler:', err);
-    try {
-      if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: 'Erro no registro.', ephemeral: true });
-      } else {
-        await interaction.editReply({ content: 'Erro no registro.' });
-      }
-    } catch {}
-  }
-});
-
-// ===== Interação: Painel de Horas =====
-client.on('interactionCreate', async (interaction) => {
-  try {
     await painelHorasHandler(client, interaction);
-  } catch (err) {
-    console.error('Erro no painelHorasHandler:', err);
-    try {
-      if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: 'Erro no painel de horas.', ephemeral: true });
-      } else {
-        await interaction.editReply({ content: 'Erro no painel de horas.' });
-      }
-    } catch {}
-  }
-});
-
-// ===== Interação: Formulário =====
-client.on('interactionCreate', async (interaction) => {
-  try {
     await formularioHandler(client, interaction);
   } catch (err) {
-    console.error('Erro no formularioHandler:', err);
+    console.error('Erro ao processar interação:', err);
     try {
       if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: 'Erro no formulário.', ephemeral: true });
+        await interaction.reply({ content: 'Erro interno.', ephemeral: true });
       } else {
-        await interaction.editReply({ content: 'Erro no formulário.' });
+        await interaction.editReply({ content: 'Erro interno.' });
       }
-    } catch {}
+    } catch (e) { /* ignore */ }
   }
 });
 
-// ===== Bate-ponto (voiceStateUpdate) =====
 client.on('voiceStateUpdate', async (oldState, newState) => {
   try {
     await voiceStateHandler(client, oldState, newState);
