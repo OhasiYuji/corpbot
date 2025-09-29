@@ -204,7 +204,7 @@ export async function formularioHandler(client, interaction) {
             try {
                 const dmMessage = isApproved 
                     ? `Parabéns! Seu formulário foi **APROVADO** por ${interaction.user.tag}. Aguarde instruções para o próximo passo.`
-                    : `Sentimos muito, mas seu formulário foi **REPROVADO** por ${interaction.user.tag}. Tente novamente em 7 dias.`;
+                    : `Sentimos muito, mas seu formulário foi **REPROVADO** por ${interaction.user.tag}. Leia as regras em: https://distritoroleplay.com/regras. E tente novamente!`;
                     
                 member.send(dmMessage).catch(() => console.log(`Não foi possível enviar DM para ${member.user.tag}`));
             } catch (error) {
