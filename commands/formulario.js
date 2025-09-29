@@ -8,28 +8,54 @@ import {
     InteractionType
 } from 'discord.js';
 
-// Importação que não está no código, mas mantida caso seja usada:
 import { getUsuariosTodos } from '../utils/sheets.js'; 
 
 const FORM_CHANNEL_ID = '1390033258309357577';
-const RESPONSES_CHANNEL_ID = '1390033258477125632';
+const RESPONSES_CHANNEL_ID = '1390033258309357578'; // 👈 NOVO ID: O resultado final (Embed com respostas) irá para cá
 const APPROVED_CHANNEL_ID = '1390033257533542417';
 const RECRUITER_ROLE_ID = '1390033256640024594'; // ID do Cargo de Recrutador/Staff
 const ICON_PF = '<:iconepf:1399436333071728730>';
 
+// ID da Categoria onde os canais de formulário serão criados
+const FORM_CATEGORY_ID = '1390033258309357576'; 
+
 const QUESTIONS = [
-    '1º • Qual sua idade?',
-    '2º • Qual o seu id no jogo?',
-    '3º • Qual sua intenção em entrar na policia federal?'
-    // você pode adicionar as outras perguntas aqui...
+  '1º • Qual sua idade?',
+  '2º • Qual o seu id no jogo?',
+  '3º • Qual sua intenção em entrar na policia federal?',
+  '4º • O que é RP e ANTI-RP?',
+  '5º • O que é RDM e VDM?',
+  '6º • O que é ter amor a vida?',
+  '7º • O que é car jacking?',
+  '8º • O que é ninja jacking?',
+  '9º • O que é DarkRP?',
+  '10º • O que são áreas verdes, neutras e vermelhas?',
+  '11º • Qual patente mínima necessária para iniciar uma patrulha?',
+  '12º • Quantos policiais são necessários para iniciar a patrulha?',
+  '13º • Quando é permitido atirar em uma perseguição?',
+  '14º • Como deve ser a conduta de abordagem?',
+  '15º • Qual o máximo de artigos que uma pessoa pode ser presa?',
+  '16º • Você pode abordar trabalhador? Se sim, quando?',
+  '17º • Quando deve ser usado o taser?',
+  '18º • Como deve ser o nome à paisana e o nome em patrulha?',
+  '19º • Pode prender morto? Se sim, quando?'
 ];
 
 /**
  * Envia o painel inicial do formulário no canal específico.
+ * Garante que apenas um painel esteja presente limpando o canal antes.
  */
 export async function enviarPainelFormulario(client) {
     const channel = await client.channels.fetch(FORM_CHANNEL_ID).catch(() => null);
-    if (!channel) return;
+    if (!channel || channel.type !== 0) return;
+
+    // Limpa o canal antes de enviar o painel para evitar duplicidade
+    try {
+        const messages = await channel.messages.fetch({ limit: 100 });
+        await channel.bulkDelete(messages, true).catch(() => {});
+    } catch (e) {
+        console.error('Não foi possível limpar o canal do formulário:', e);
+    }
 
     const embed = new EmbedBuilder()
         .setTitle('Formulário de Recrutamento')
@@ -43,8 +69,6 @@ export async function enviarPainelFormulario(client) {
             .setStyle(ButtonStyle.Primary)
     );
 
-    // Limpa o canal ou apenas envia a mensagem, dependendo da sua preferência.
-    // Neste caso, vou apenas garantir o envio.
     await channel.send({ embeds: [embed], components: [row] }).catch(console.error);
 }
 
@@ -60,22 +84,24 @@ export async function formularioHandler(client, interaction) {
     if (customId === 'start_form') {
         try {
             const guild = interaction.guild;
+            const user = interaction.user;
 
             // 1. Criação do Canal Privado
             const channel = await guild.channels.create({
-                name: `formulario-${interaction.user.username.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+                name: `formulario-${user.username.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
                 type: 0, // GuildText
+                parent: FORM_CATEGORY_ID, // Define a categoria
                 permissionOverwrites: [
                     {
                         id: guild.id, // @everyone
                         deny: [PermissionsBitField.Flags.ViewChannel]
                     },
                     {
-                        id: interaction.user.id, // O Usuário que iniciou
+                        id: user.id, // O Usuário que iniciou
                         allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages]
                     },
                     {
-                        id: client.user.id, // 👈 CORREÇÃO: Adiciona o bot para que ele possa enviar a mensagem
+                        id: client.user.id, // O Bot
                         allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages]
                     }
                 ]
@@ -90,7 +116,6 @@ export async function formularioHandler(client, interaction) {
 
             // 2. Coleta de Respostas
             const responses = [];
-            const user = interaction.user;
 
             for (const question of QUESTIONS) {
                 const embed = new EmbedBuilder()
@@ -113,7 +138,7 @@ export async function formularioHandler(client, interaction) {
             }
 
             // 3. Envio das Respostas
-            channel.send('**Formulário concluído!** Enviando respostas para avaliação. Este canal será excluído em breve.');
+            channel.send('**Formulário concluído!** Enviando respostas para avaliação. Este canal será excluído em 15 segundos.');
 
             const responseChannel = await client.channels.fetch(RESPONSES_CHANNEL_ID).catch(() => null);
             if (!responseChannel) return channel.send('Erro: Não foi possível enviar as respostas para o canal de avaliação.');
@@ -128,11 +153,11 @@ export async function formularioHandler(client, interaction) {
 
             const actionRow = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
-                    .setCustomId(`form_approve_${user.id}`) // Botão de Aprovar com o ID do usuário
+                    .setCustomId(`form_approve_${user.id}`) 
                     .setLabel('Aprovar Candidato')
                     .setStyle(ButtonStyle.Success),
                 new ButtonBuilder()
-                    .setCustomId(`form_reject_${user.id}`) // Botão de Reprovar com o ID do usuário
+                    .setCustomId(`form_reject_${user.id}`) 
                     .setLabel('Reprovar Candidato')
                     .setStyle(ButtonStyle.Danger)
             );
@@ -159,7 +184,7 @@ export async function formularioHandler(client, interaction) {
 
     // --- 2. Lógica para APROVAR/REPROVAR ---
     else if (customId.startsWith('form_approve_') || customId.startsWith('form_reject_')) {
-        // Verifica se é um recrutador
+        // Verifica se é um recrutador/staff
         if (!interaction.member.roles.cache.has(RECRUITER_ROLE_ID) && !interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
             return interaction.reply({ content: 'Você não tem permissão para usar este botão.', ephemeral: true });
         }
@@ -172,12 +197,10 @@ export async function formularioHandler(client, interaction) {
 
         await interaction.deferUpdate();
 
-        // 1. Tenta enviar a mensagem no canal de aprovados/DM
+        // 1. Notifica o usuário e/ou envia para o canal de aprovados
         if (member) {
             try {
                 if (isApproved) {
-                    // Opcional: Adicionar um cargo de "Candidato Aprovado" ou mover para um canal de entrevista
-                    // Aqui, você pode adicionar a lógica de envio para o canal de APROVADOS (log)
                     const approvedChannel = await client.channels.fetch(APPROVED_CHANNEL_ID).catch(() => null);
                     if (approvedChannel) {
                         approvedChannel.send({ content: `✅ Candidato **<@${userId}>** foi aprovado pelo Recrutador **<@${interaction.user.id}>**!` });
