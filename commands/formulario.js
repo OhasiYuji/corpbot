@@ -66,7 +66,7 @@ export async function enviarPainelFormulario(client) {
         new ButtonBuilder()
             .setCustomId('start_form')
             .setLabel('Realizar Formulário')
-            .setStyle(ButtonStyle.Primary)
+            .setStyle(ButtonStyle.Secondary)
     );
 
     await channel.send({ embeds: [embed], components: [row] }).catch(console.error);
