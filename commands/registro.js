@@ -12,21 +12,18 @@ import { registrarUsuario } from '../utils/sheets.js';
 
 // Constantes
 const PANEL_CHANNEL_ID = process.env.REGISTER_PANEL_CHANNEL_ID || '1396852912709308426';
-const LOG_CHANNEL_ID = '1390033258821062760'; // 👈 NOVO CANAL DE LOG
+const LOG_CHANNEL_ID = '1390033258821062760'; // Canal que recebe a notificação de registro
 const ICON = '<:Policiafederallogo:1399436333071728730>';
-const ICON_PF = '<:iconepf:1399436333071728730>'; // Assumindo este é o ícone da PF que você mencionou no formulário.js
+const ICON_PF = '<:iconepf:1399436333071728730>'; // Assumindo este é o ícone da PF que você está usando
 
 /**
- * Envia o painel inicial de registro.
- *
- * NOTA: Assim como no formulario.js, se você não quer que o painel seja reenviado a cada reinício,
- * adicione uma lógica de limpeza de canal ou verifique se a mensagem já existe.
+ * Envia o painel inicial de registro, limpando o canal antes para evitar duplicidade.
  */
 export async function sendRegistroPanel(client) {
     const channel = await client.channels.fetch(PANEL_CHANNEL_ID).catch(() => null);
     if (!channel) return;
     
-    // Opcional: Adicionar lógica para limpar o canal antes de enviar
+    // Limpa o canal antes de enviar o painel
     try {
         const messages = await channel.messages.fetch({ limit: 100 });
         await channel.bulkDelete(messages, true).catch(() => {});
@@ -50,13 +47,12 @@ export async function sendRegistroPanel(client) {
 }
 
 /**
- * Envia uma mensagem de log formatada para o canal de LOG.
+ * Envia uma mensagem de log formatada para o canal de LOG (1390033258821062760).
  */
 async function sendRegistroLog(client, user, nome, idJogo, login) {
     const logChannel = await client.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
     if (!logChannel) return;
 
-    // A TAG padrão que você especificou
     const tag = "DPF - DRP"; 
 
     // Mensagem formatada exatamente como você pediu
@@ -109,6 +105,7 @@ export async function registroHandler(client, interaction) {
         }
 
         if (interaction.type === InteractionType.ModalSubmit && interaction.customId === 'modal_registro') {
+            // Deferir para evitar timeout durante o processo de registro
             await interaction.deferReply({ ephemeral: true });
 
             const nome = interaction.fields.getTextInputValue('nome');
@@ -116,25 +113,35 @@ export async function registroHandler(client, interaction) {
             const login = interaction.fields.getTextInputValue('login');
 
             const result = await registrarUsuario(interaction.user.id, nome, idJogo, login);
-            if (!result) return interaction.editReply({ content: 'Você já está registrado.' });
+            
+            if (!result) {
+                // Usuário já registrado
+                return interaction.editReply({ content: 'Você já está registrado.' });
+            }
 
             try {
                 // Tenta definir o apelido do usuário
                 await interaction.member.setNickname(`DPF » ${nome} (${idJogo})`).catch(() => null);
             } catch {}
 
-            // CHAMA A FUNÇÃO DE LOG APÓS O REGISTRO BEM-SUCEDIDO
+            // Envio do log formatado
             await sendRegistroLog(client, interaction.user, nome, idJogo, login); 
 
             return interaction.editReply({ content: 'Registro realizado com sucesso! ✅' });
         }
     } catch (err) {
         console.error('registroHandler error:', err);
+        
+        // Tratamento de erro robusto após deferReply
         try {
-            if (interaction.deferred || interaction.replied) return interaction.editReply({ content: 'Erro no registro.' });
+            if (interaction.deferred || interaction.replied) {
+                // Tenta usar followUp se o defer foi feito mas editReply falhou
+                return interaction.followUp({ content: 'Erro no registro. Tente novamente.', ephemeral: true });
+            }
+            // Caso não tenha conseguido nem deferir (geralmente timeout)
             return interaction.reply({ content: 'Erro no registro.', ephemeral: true });
         } catch (e) {
-            console.error(e);
+            console.error('Erro ao lidar com a exceção:', e);
         }
     }
 }
