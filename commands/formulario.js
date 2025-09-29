@@ -11,8 +11,8 @@ import {
 import { getUsuariosTodos } from '../utils/sheets.js'; 
 
 const FORM_CHANNEL_ID = '1390033258309357577';
-const RESPONSES_CHANNEL_ID = '1390033258477125632'; // 👈 AGORA USADO PARA RECEBER O FORMULÁRIO E A NOTIFICAÇÃO DE STATUS
-const APPROVED_CHANNEL_ID = '1390033257533542417'; // Mantido caso queira um canal de LOG de APROVAÇÃO separado
+const RESPONSES_CHANNEL_ID = '1390033258477125632'; // Recebe o painel de respostas com os botões
+const APPROVED_CHANNEL_ID = '1390033258309357578'; // 👈 NOVO ID/LOG: Recebe o EMBED de notificação de Aprovado/Reprovado
 const RECRUITER_ROLE_ID = '1390033256640024594'; // ID do Cargo de Recrutador/Staff
 const ICON_PF = '<:iconepf:1399436333071728730>';
 
@@ -195,27 +195,18 @@ export async function formularioHandler(client, interaction) {
         const action = customId.startsWith('form_approve_') ? 'Aprovado' : 'Reprovado';
         const isApproved = action === 'Aprovado';
         const color = isApproved ? 0x00FF00 : 0xFF0000;
+        const statusIcon = isApproved ? '✅' : '❌';
 
         await interaction.deferUpdate();
         
-        // Busca o canal de respostas para mandar a notificação de status
-        const responseChannel = await client.channels.fetch(RESPONSES_CHANNEL_ID).catch(() => null);
-
-        // 1. Notifica o usuário e/ou envia para o canal de LOG
+        // 1. Notifica o usuário por DM
         if (member) {
             try {
-                if (isApproved) {
-                    // Opcional: Enviar uma notificação para um canal de LOG (APPROVED_CHANNEL_ID)
-                    const approvedChannel = await client.channels.fetch(APPROVED_CHANNEL_ID).catch(() => null);
-                    if (approvedChannel) {
-                        // Se for um canal diferente do RESPONSES_CHANNEL_ID, a notificação de LOG vai para cá.
-                        approvedChannel.send({ content: `✅ Candidato **<@${userId}>** foi aprovado por **<@${interaction.user.id}>**!` });
-                    }
+                const dmMessage = isApproved 
+                    ? `Parabéns! Seu formulário foi **APROVADO** por ${interaction.user.tag}. Aguarde instruções para o próximo passo.`
+                    : `Sentimos muito, mas seu formulário foi **REPROVADO** por ${interaction.user.tag}. Tente novamente em 7 dias.`;
                     
-                    member.send(`Parabéns! Seu formulário foi **APROVADO** por ${interaction.user.tag}. Aguarde instruções para o próximo passo.`).catch(() => console.log(`Não foi possível enviar DM para ${member.user.tag}`));
-                } else {
-                    member.send(`Sentimos muito, mas seu formulário foi **REPROVADO** por ${interaction.user.tag}. Tente novamente em 7 dias.`).catch(() => console.log(`Não foi possível enviar DM para ${member.user.tag}`));
-                }
+                member.send(dmMessage).catch(() => console.log(`Não foi possível enviar DM para ${member.user.tag}`));
             } catch (error) {
                 console.error('Erro ao notificar o usuário:', error);
             }
@@ -233,9 +224,22 @@ export async function formularioHandler(client, interaction) {
             components: [] // Remove os botões
         });
         
-        // 3. (Opcional) Enviar uma mensagem de NOTIFICAÇÃO no RESPONSES_CHANNEL_ID após a edição
-        if (responseChannel && responseChannel.id === RESPONSES_CHANNEL_ID) {
-             responseChannel.send(`📢 O formulário de **${member ? member.user.tag : userId}** foi **${action}** por <@${interaction.user.id}>.`).catch(console.error);
+        // 3. Envia o EMBED de notificação de status para o canal APPROVED_CHANNEL_ID (1390033258309357578)
+        const logChannel = await client.channels.fetch(APPROVED_CHANNEL_ID).catch(() => null);
+        
+        if (logChannel) {
+            const logEmbed = new EmbedBuilder()
+                .setTitle(`${statusIcon} Candidato ${action}`)
+                .setDescription(`O formulário de **${member ? member.user.tag : userId}** (<@${userId}>) foi processado.`)
+                .addFields(
+                    { name: 'Status', value: `**${action}**`, inline: true },
+                    { name: 'Recrutador', value: `<@${interaction.user.id}>`, inline: true }
+                )
+                .setThumbnail(member ? member.user.displayAvatarURL() : null)
+                .setColor(color)
+                .setTimestamp();
+                
+            logChannel.send({ embeds: [logEmbed] }).catch(console.error);
         }
     }
 }
