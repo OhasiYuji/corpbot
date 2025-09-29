@@ -11,8 +11,8 @@ import {
 import { getUsuariosTodos } from '../utils/sheets.js'; 
 
 const FORM_CHANNEL_ID = '1390033258309357577';
-const RESPONSES_CHANNEL_ID = '1390033258309357578'; // 👈 NOVO ID: O resultado final (Embed com respostas) irá para cá
-const APPROVED_CHANNEL_ID = '1390033257533542417';
+const RESPONSES_CHANNEL_ID = '1390033258477125632'; // 👈 AGORA USADO PARA RECEBER O FORMULÁRIO E A NOTIFICAÇÃO DE STATUS
+const APPROVED_CHANNEL_ID = '1390033257533542417'; // Mantido caso queira um canal de LOG de APROVAÇÃO separado
 const RECRUITER_ROLE_ID = '1390033256640024594'; // ID do Cargo de Recrutador/Staff
 const ICON_PF = '<:iconepf:1399436333071728730>';
 
@@ -137,7 +137,7 @@ export async function formularioHandler(client, interaction) {
                 responses.push({ question, answer: collected.first().content });
             }
 
-            // 3. Envio das Respostas
+            // 3. Envio das Respostas (Painel de Aprovação)
             channel.send('**Formulário concluído!** Enviando respostas para avaliação. Este canal será excluído em 15 segundos.');
 
             const responseChannel = await client.channels.fetch(RESPONSES_CHANNEL_ID).catch(() => null);
@@ -162,6 +162,7 @@ export async function formularioHandler(client, interaction) {
                     .setStyle(ButtonStyle.Danger)
             );
 
+            // A MENSAGEM DO FORMULÁRIO COM OS BOTÕES VAI PARA RESPONSES_CHANNEL_ID
             await responseChannel.send({
                 embeds: [embedResponses],
                 components: [actionRow]
@@ -196,14 +197,19 @@ export async function formularioHandler(client, interaction) {
         const color = isApproved ? 0x00FF00 : 0xFF0000;
 
         await interaction.deferUpdate();
+        
+        // Busca o canal de respostas para mandar a notificação de status
+        const responseChannel = await client.channels.fetch(RESPONSES_CHANNEL_ID).catch(() => null);
 
-        // 1. Notifica o usuário e/ou envia para o canal de aprovados
+        // 1. Notifica o usuário e/ou envia para o canal de LOG
         if (member) {
             try {
                 if (isApproved) {
+                    // Opcional: Enviar uma notificação para um canal de LOG (APPROVED_CHANNEL_ID)
                     const approvedChannel = await client.channels.fetch(APPROVED_CHANNEL_ID).catch(() => null);
                     if (approvedChannel) {
-                        approvedChannel.send({ content: `✅ Candidato **<@${userId}>** foi aprovado pelo Recrutador **<@${interaction.user.id}>**!` });
+                        // Se for um canal diferente do RESPONSES_CHANNEL_ID, a notificação de LOG vai para cá.
+                        approvedChannel.send({ content: `✅ Candidato **<@${userId}>** foi aprovado por **<@${interaction.user.id}>**!` });
                     }
                     
                     member.send(`Parabéns! Seu formulário foi **APROVADO** por ${interaction.user.tag}. Aguarde instruções para o próximo passo.`).catch(() => console.log(`Não foi possível enviar DM para ${member.user.tag}`));
@@ -215,7 +221,7 @@ export async function formularioHandler(client, interaction) {
             }
         }
 
-        // 2. Edita a mensagem do formulário no canal de respostas
+        // 2. Edita a mensagem do formulário no canal de respostas (removendo botões)
         const oldEmbed = interaction.message.embeds[0];
         const newEmbed = EmbedBuilder.from(oldEmbed)
             .setTitle(`[${action}] Formulário de ${member ? member.user.tag : userId}`)
@@ -226,5 +232,10 @@ export async function formularioHandler(client, interaction) {
             embeds: [newEmbed],
             components: [] // Remove os botões
         });
+        
+        // 3. (Opcional) Enviar uma mensagem de NOTIFICAÇÃO no RESPONSES_CHANNEL_ID após a edição
+        if (responseChannel && responseChannel.id === RESPONSES_CHANNEL_ID) {
+             responseChannel.send(`📢 O formulário de **${member ? member.user.tag : userId}** foi **${action}** por <@${interaction.user.id}>.`).catch(console.error);
+        }
     }
 }
