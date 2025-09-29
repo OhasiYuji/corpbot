@@ -3,18 +3,21 @@ import {
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle,
     EmbedBuilder,
+    InteractionType,
     PermissionsBitField
 } from 'discord.js';
 
-const FORM_CHANNEL_ID = '1390033258309357577'; // canal público para o botão
+const FORM_CHANNEL_ID = '1390033258309357577'; // Canal público do botão
 const PANEL_CHANNEL_ID = '1396852912709308426';
 const TUTORIAL = '1390033257533542410';
 const ICON_PF = '<:iconepf:1399436333071728730>';
 const F3_PENDENTE = '1399875114660532244';
 const RESPONSES_CHANNEL_ID = '1390033258477125632';
 const APPROVED_CHANNEL_ID = '1390033258309357578';
-const FORM_CATEGORY_ID = '1390033258309357576';
 const RECRUITER_ROLE_ID = '1390033256640024594';
 const APPROVED_ROLES = [
     '1390033256652476596',
@@ -45,6 +48,7 @@ const QUESTIONS = [
     '19º • Pode prender morto? Se sim, quando?'
 ];
 
+// Enviar botão do formulário
 export async function enviarPainelFormulario(client) {
     const channel = await client.channels.fetch(FORM_CHANNEL_ID);
     if (!channel) return console.log('Canal de formulário não encontrado');
@@ -64,58 +68,41 @@ export async function enviarPainelFormulario(client) {
     await channel.send({ embeds: [embed], components: [row] });
 }
 
+// Handler do formulário
 export async function formularioHandler(client, interaction) {
     try {
-        if (!interaction.isButton()) return;
+        // Clique no botão para abrir formulário
+        if (interaction.isButton() && interaction.customId === 'start_form') {
+            // Criar modal
+            const modal = new ModalBuilder()
+                .setCustomId(`form_modal_${interaction.user.id}`)
+                .setTitle('Formulário de Recrutamento');
 
-        // Iniciar formulário
-        if (interaction.customId === 'start_form') {
-            const guild = interaction.guild;
-
-            // Cria canal temporário privado
-            const tempChannel = await guild.channels.create({
-                name: `formulario-${interaction.user.username}`,
-                type: 0, // GuildText
-                parent: FORM_CATEGORY_ID,
-                permissionOverwrites: [
-                    {
-                        id: guild.roles.everyone.id,
-                        deny: [PermissionsBitField.Flags.ViewChannel]
-                    },
-                    {
-                        id: interaction.user.id,
-                        allow: [
-                            PermissionsBitField.Flags.ViewChannel,
-                            PermissionsBitField.Flags.SendMessages,
-                            PermissionsBitField.Flags.ReadMessageHistory
-                        ]
-                    },
-                    {
-                        id: RECRUITER_ROLE_ID,
-                        allow: [PermissionsBitField.Flags.ViewChannel]
-                    }
-                ]
-            });
-
-            await interaction.reply({ content: `Seu canal de formulário foi criado: ${tempChannel}`, ephemeral: true });
-
-            // Coletar respostas
-            const responses = [];
-            for (const question of QUESTIONS) {
-                const embed = new EmbedBuilder()
-                    .setTitle('Pergunta')
-                    .setDescription(question)
-                    .setColor(0xFFD700);
-
-                await tempChannel.send({ embeds: [embed] });
-
-                const filter = m => m.author.id === interaction.user.id;
-                const collected = await tempChannel.awaitMessages({ filter, max: 1, time: 600000, errors: ['time'] });
-                const answer = collected.first().content;
-                responses.push({ question, answer });
+            // Adicionar campos do modal (discord permite 5 por modal, então vamos dividir)
+            for (let i = 0; i < 5 && i < QUESTIONS.length; i++) {
+                const input = new TextInputBuilder()
+                    .setCustomId(`q_${i}`)
+                    .setLabel(QUESTIONS[i])
+                    .setStyle(TextInputStyle.Paragraph)
+                    .setRequired(true);
+                modal.addComponents(new ActionRowBuilder().addComponents(input));
             }
 
-            // Enviar respostas para revisão
+            await interaction.showModal(modal);
+        }
+
+        // Receber modal submit
+        if (interaction.type === InteractionType.ModalSubmit && interaction.customId.startsWith('form_modal_')) {
+            const targetUserId = interaction.user.id;
+            const responses = [];
+
+            // Coletar respostas do modal
+            Object.keys(interaction.fields.fields).forEach((key, index) => {
+                const answer = interaction.fields.getTextInputValue(key);
+                responses.push({ question: QUESTIONS[index], answer });
+            });
+
+            // Embed para os recrutadores
             const embedResponses = new EmbedBuilder()
                 .setTitle(`Formulário de ${interaction.user.tag}`)
                 .setColor(0xFFD700);
@@ -124,14 +111,15 @@ export async function formularioHandler(client, interaction) {
                 embedResponses.addFields({ name: resp.question, value: resp.answer });
             });
 
+            // Botões de aprovação/reprovação
             const row = new ActionRowBuilder()
                 .addComponents(
                     new ButtonBuilder()
-                        .setCustomId(`approve_${interaction.user.id}`)
+                        .setCustomId(`approve_${targetUserId}`)
                         .setLabel('Aprovar')
                         .setStyle(ButtonStyle.Success),
                     new ButtonBuilder()
-                        .setCustomId(`reject_${interaction.user.id}`)
+                        .setCustomId(`reject_${targetUserId}`)
                         .setLabel('Reprovar')
                         .setStyle(ButtonStyle.Danger)
                 );
@@ -139,17 +127,16 @@ export async function formularioHandler(client, interaction) {
             const responseChannel = await client.channels.fetch(RESPONSES_CHANNEL_ID);
             await responseChannel.send({ embeds: [embedResponses], components: [row] });
 
-            await tempChannel.send('Formulário enviado! Aguarde a aprovação/reprovação.');
+            await interaction.reply({ content: 'Formulário enviado! Aguarde a aprovação/reprovação.', ephemeral: true });
         }
 
         // Aprovar
-        if (interaction.customId.startsWith('approve_')) {
-            if (!interaction.member.roles.cache.has(RECRUITER_ROLE_ID)) {
+        if (interaction.isButton() && interaction.customId.startsWith('approve_')) {
+            if (!interaction.member.roles.cache.has(RECRUITER_ROLE_ID))
                 return interaction.reply({ content: 'Você não tem permissão.', ephemeral: true });
-            }
 
-            const targetUserId = interaction.customId.split('_')[1];
-            const member = await interaction.guild.members.fetch(targetUserId);
+            const memberId = interaction.customId.split('_')[1];
+            const member = await interaction.guild.members.fetch(memberId);
             if (!member) return interaction.reply({ content: 'Membro não encontrado.', ephemeral: true });
 
             for (const roleId of APPROVED_ROLES) {
@@ -176,13 +163,12 @@ Olá ${member}, parabéns! Você foi aprovado no formulário.
         }
 
         // Reprovar
-        if (interaction.customId.startsWith('reject_')) {
-            if (!interaction.member.roles.cache.has(RECRUITER_ROLE_ID)) {
+        if (interaction.isButton() && interaction.customId.startsWith('reject_')) {
+            if (!interaction.member.roles.cache.has(RECRUITER_ROLE_ID))
                 return interaction.reply({ content: 'Você não tem permissão.', ephemeral: true });
-            }
 
-            const targetUserId = interaction.customId.split('_')[1];
-            const member = await interaction.guild.members.fetch(targetUserId);
+            const memberId = interaction.customId.split('_')[1];
+            const member = await interaction.guild.members.fetch(memberId);
             if (!member) return interaction.reply({ content: 'Membro não encontrado.', ephemeral: true });
 
             await interaction.update({ content: 'Reprovado!', components: [], embeds: [] });
@@ -205,7 +191,7 @@ Olá ${member}, infelizmente suas respostas estavam incorretas.
         }
 
     } catch (err) {
-        console.error('Erro ao processar interação:', err);
+        console.error('Erro no formulário:', err);
         if (!interaction.replied && !interaction.deferred) {
             await interaction.reply({ content: 'Erro interno no formulário.', ephemeral: true }).catch(() => null);
         }
