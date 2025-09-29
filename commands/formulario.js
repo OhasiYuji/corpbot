@@ -70,28 +70,26 @@ export async function enviarPainelFormulario(client) {
 // Handler do formulário
 export async function formularioHandler(client, interaction) {
     try {
-        // ----------------------------
-        // BOTÃO: Iniciar formulário
-        // ----------------------------
-        if (interaction.isButton() && interaction.customId === 'start_form') {
+            // BOTÃO: Iniciar formulário
+            if (interaction.isButton() && interaction.customId === 'start_form') {
             const modal = new ModalBuilder()
                 .setCustomId(`form_modal_${interaction.user.id}`)
                 .setTitle('Formulário de Recrutamento');
 
-            // Adiciona até 5 perguntas por modal
             for (let i = 0; i < 5 && i < QUESTIONS.length; i++) {
                 const input = new TextInputBuilder()
-                    .setCustomId(`q_${i}`)
-                    .setLabel(QUESTIONS[i])
-                    .setStyle(TextInputStyle.Paragraph)
-                    .setRequired(true);
+                .setCustomId(`q_${i}`)
+                .setLabel(QUESTIONS[i])
+                .setStyle(TextInputStyle.Paragraph)
+                .setRequired(true);
 
                 modal.addComponents(new ActionRowBuilder().addComponents(input));
             }
 
             await interaction.showModal(modal);
-            return; // evita cair em outros ifs
-        }
+            return; // aqui qualquer usuário consegue abrir o formulário
+            }
+
 
         // ----------------------------
         // SUBMISSÃO DO MODAL
