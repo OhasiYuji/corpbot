@@ -1,33 +1,28 @@
 // commands/formulario.js
 import {
-    Client,
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle,
-    ModalBuilder,
-    TextInputBuilder,
-    TextInputStyle,
     EmbedBuilder,
-    InteractionType,
-    PermissionsBitField
+    PermissionsBitField,
+    InteractionType
 } from 'discord.js';
 
-const FORM_CHANNEL_ID = '1390033258309357577'; // canal para enviar painel de formulário
+const FORM_CHANNEL_ID = '1390033258309357577';
 const PANEL_CHANNEL_ID = '1396852912709308426';
 const TUTORIAL = '1390033257533542410';
-const ICON_PF = '<:iconepf:1399436333071728730>'; // emoji da polícia
+const ICON_PF = '<:iconepf:1399436333071728730>';
 const F3_PENDENTE = '1399875114660532244';
-const RESPONSES_CHANNEL_ID = '1390033258477125632'; // canal para respostas
-const APPROVED_CHANNEL_ID = '1390033258309357578'; // canal de mensagem final se aprovado/reprovado
-const FORM_CATEGORY_ID = '1390033258309357576'; // categoria para criar canais de formulário
-const RECRUITER_ROLE_ID = '1390033256640024594'; // só quem tem esse cargo pode aprovar/reprovar
+const RESPONSES_CHANNEL_ID = '1390033258477125632';
+const APPROVED_CHANNEL_ID = '1390033258309357578';
+const FORM_CATEGORY_ID = '1390033258309357576';
+const RECRUITER_ROLE_ID = '1390033256640024594';
 const APPROVED_ROLES = [
     '1390033256652476596',
     '1390033256652476595',
     '1390033256652476594',
     '1390033256652476592'
 ];
-
 
 const QUESTIONS = [
     '1º • Qual sua idade?',
@@ -72,166 +67,154 @@ export async function enviarPainelFormulario(client) {
 
 export async function formularioHandler(client, interaction) {
     try {
-        if (interaction.isButton()) {
-            // Iniciar formulário
-            if (interaction.customId === 'start_form') {
-                const guild = interaction.guild;
+        if (!interaction.isButton()) return;
 
-                // Criar canal temporário para o usuário
-                const channel = await guild.channels.create({
-                    name: `formulario-${interaction.user.username}`,
-                    type: 0, // GuildText
-                    parent: FORM_CATEGORY_ID,
-                    permissionOverwrites: [
-                        {
-                            id: guild.id,
-                            deny: [PermissionsBitField.Flags.ViewChannel]
-                        },
-                        {
-                            id: interaction.user.id,
-                            allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages]
-                        }
-                    ]
-                });
+        // Iniciar formulário
+        if (interaction.customId === 'start_form') {
+            const guild = interaction.guild;
 
-                await interaction.reply({ content: `Seu canal de formulário foi criado: ${channel}`, ephemeral: true });
+            // Cria canal temporário
+            const channel = await guild.channels.create({
+                name: `formulario-${interaction.user.username}`,
+                type: 0, // GuildText
+                parent: FORM_CATEGORY_ID,
+                permissionOverwrites: [
+                    {
+                        id: guild.roles.everyone.id,
+                        deny: [PermissionsBitField.Flags.ViewChannel]
+                    },
+                    {
+                        id: interaction.user.id,
+                        allow: [
+                            PermissionsBitField.Flags.ViewChannel,
+                            PermissionsBitField.Flags.SendMessages,
+                            PermissionsBitField.Flags.ReadMessageHistory
+                        ]
+                    },
+                    {
+                        id: RECRUITER_ROLE_ID,
+                        allow: [PermissionsBitField.Flags.ViewChannel]
+                    }
+                ]
+            });
 
-                // Enviar perguntas no canal criado
-                const responses = [];
-                for (const question of QUESTIONS) {
-                    const embed = new EmbedBuilder()
-                        .setTitle('Pergunta')
-                        .setDescription(question)
-                        .setColor(0xFFD700);
-                    await channel.send({ embeds: [embed] });
+            await interaction.reply({ content: `Seu canal de formulário foi criado: ${channel}`, ephemeral: true });
 
-                    // Esperar resposta do usuário
-                    const filter = m => m.author.id === interaction.user.id;
-                    const collected = await channel.awaitMessages({ filter, max: 1, time: 600000, errors: ['time'] });
-                    const answer = collected.first().content;
-                    responses.push({ question, answer });
-                }
-
-                // Enviar respostas no canal de respostas
-                const embedResponses = new EmbedBuilder()
-                    .setTitle(`Formulário de ${interaction.user.tag}`)
+            // Coletar respostas
+            const responses = [];
+            for (const question of QUESTIONS) {
+                const embed = new EmbedBuilder()
+                    .setTitle('Pergunta')
+                    .setDescription(question)
                     .setColor(0xFFD700);
 
-                responses.forEach((resp, i) => {
-                    embedResponses.addFields({ name: resp.question, value: resp.answer });
-                });
+                await channel.send({ embeds: [embed] });
 
-                // Botões aprovar/reprovar
-                const row = new ActionRowBuilder()
-                    .addComponents(
-                        new ButtonBuilder()
-                            .setCustomId(`approve_${interaction.user.id}`)
-                            .setLabel('Aprovar')
-                            .setStyle(ButtonStyle.Success),
-                        new ButtonBuilder()
-                            .setCustomId(`reject_${interaction.user.id}`)
-                            .setLabel('Reprovar')
-                            .setStyle(ButtonStyle.Danger)
-                    );
-
-                const responseChannel = await client.channels.fetch(RESPONSES_CHANNEL_ID);
-                const responseMessage = await responseChannel.send({ embeds: [embedResponses], components: [row] });
-
-                await channel.send('Formulário enviado! Aguarde a aprovação/reprovação.');
-                
-                // Apagar o canal após 10 segundos
-                setTimeout(() => {
-                    channel.delete().catch(console.error);
-                }, 10000);
+                const filter = m => m.author.id === interaction.user.id;
+                const collected = await channel.awaitMessages({ filter, max: 1, time: 600000, errors: ['time'] });
+                const answer = collected.first().content;
+                responses.push({ question, answer });
             }
 
-            // Aprovar
-            if (interaction.customId.startsWith('approve_')) {
-                if (!interaction.member.roles.cache.has(RECRUITER_ROLE_ID)) {
-                    return interaction.reply({ content: 'Você não tem permissão.', ephemeral: true });
-                }
+            // Enviar respostas para o canal de revisão
+            const embedResponses = new EmbedBuilder()
+                .setTitle(`Formulário de ${interaction.user.tag}`)
+                .setColor(0xFFD700);
 
-                const targetUserId = interaction.customId.split('_')[1];
-                const member = await interaction.guild.members.fetch(targetUserId);
-                if (!member) return interaction.reply({ content: 'Membro não encontrado.', ephemeral: true });
+            responses.forEach(resp => {
+                embedResponses.addFields({ name: resp.question, value: resp.answer });
+            });
 
-                for (const roleId of APPROVED_ROLES) {
-                    await member.roles.add(roleId).catch(console.error);
-                }
+            const row = new ActionRowBuilder()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`approve_${interaction.user.id}`)
+                        .setLabel('Aprovar')
+                        .setStyle(ButtonStyle.Success),
+                    new ButtonBuilder()
+                        .setCustomId(`reject_${interaction.user.id}`)
+                        .setLabel('Reprovar')
+                        .setStyle(ButtonStyle.Danger)
+                );
 
-                await interaction.update({ content: 'Aprovado!', components: [], embeds: [] });
+            const responseChannel = await client.channels.fetch(RESPONSES_CHANNEL_ID);
+            await responseChannel.send({ embeds: [embedResponses], components: [row] });
 
-                const approvedChannel = await client.channels.fetch(APPROVED_CHANNEL_ID);
-                const embedApproved = new EmbedBuilder()
-                    .setTitle(`${ICON_PF} Formulário Aprovado`)
-                    .setDescription(`
-                Olá ${member}, parabéns! Você foi aprovado no formulário.
+            await channel.send('Formulário enviado! Aguarde a aprovação/reprovação.');
 
-                📝 **Próximos passos:**
-                • Faça o seu **registro** no canal: <#${PANEL_CHANNEL_ID}>
-                • Solicite sua **tag** no canal: <#${F3_PENDENTE}>
-                • Confira o **tutorial da corporação** aqui: <#${TUTORIAL}>
-                `)
-                    .setColor(0x00FF00)
-                    .setFooter({ text: 'Polícia Federal - DRP' });
-
-                // Envia a menção e o embed
-                await approvedChannel.send({ content: `${member}`, embeds: [embedApproved] });
-            }
-
-            // Reprovar
-            if (interaction.customId.startsWith('reject_')) {
-                if (!interaction.member.roles.cache.has(RECRUITER_ROLE_ID)) {
-                    return interaction.reply({ content: 'Você não tem permissão.', ephemeral: true });
-                }
-
-                const targetUserId = interaction.customId.split('_')[1];
-                const member = await interaction.guild.members.fetch(targetUserId);
-                if (!member) return interaction.reply({ content: 'Membro não encontrado.', ephemeral: true });
-
-                // Limpa a mensagem original
-                await interaction.update({ content: 'Reprovado!', components: [], embeds: [] });
-
-                const rejectedChannel = await client.channels.fetch(APPROVED_CHANNEL_ID); // pode trocar por um canal só de reprovados
-
-                const embedRejected = new EmbedBuilder()
-                    .setTitle(`${ICON_PF} Formulário Reprovado`)
-                    .setDescription(`
-                    Olá ${member}, infelizmente suas respostas estavam incorretas.  
-
-                    📌 **Próximos passos:**
-                    • Leia atentamente as regras no site:  
-                    🔗 https://distritoroleplay.com/regras
-                    • Refaça o formulário após se preparar melhor.
-                    `)
-                    .setColor(0xFF0000)
-                    .setFooter({ text: 'Polícia Federal - DRP' });
-
-                // Envia menção + embed
-                await rejectedChannel.send({ content: `${member}`, embeds: [embedRejected] });
-            }
+            // Deleta o canal temporário depois de 10s
+            setTimeout(() => {
+                channel.delete().catch(console.error);
+            }, 10000);
         }
 
-        // Receber motivo de reprovação
-        if (interaction.type === InteractionType.ModalSubmit && interaction.customId.startsWith('reject_reason_')) {
-            const targetUserId = interaction.customId.split('_')[2];
-            const reason = interaction.fields.getTextInputValue('reason');
+        // Aprovar
+        if (interaction.customId.startsWith('approve_')) {
+            if (!interaction.member.roles.cache.has(RECRUITER_ROLE_ID)) {
+                return interaction.reply({ content: 'Você não tem permissão.', ephemeral: true });
+            }
 
+            const targetUserId = interaction.customId.split('_')[1];
             const member = await interaction.guild.members.fetch(targetUserId);
             if (!member) return interaction.reply({ content: 'Membro não encontrado.', ephemeral: true });
 
-            await interaction.reply({ content: 'Reprovação registrada!', ephemeral: true });
+            for (const roleId of APPROVED_ROLES) {
+                await member.roles.add(roleId).catch(console.error);
+            }
+
+            await interaction.update({ content: 'Aprovado!', components: [], embeds: [] });
 
             const approvedChannel = await client.channels.fetch(APPROVED_CHANNEL_ID);
-            const embedReject = new EmbedBuilder()
-                .setTitle('Formulário Reprovado ❌')
-                .setDescription(`${member} foi reprovado.\nMotivo: ${reason}`)
-                .setColor(0xFF0000);
+            const embedApproved = new EmbedBuilder()
+                .setTitle(`${ICON_PF} Formulário Aprovado`)
+                .setDescription(`
+Olá ${member}, parabéns! Você foi aprovado no formulário.
 
-            await approvedChannel.send({ embeds: [embedReject] });
+📝 **Próximos passos:**
+• Faça o seu **registro** no canal: <#${PANEL_CHANNEL_ID}>
+• Solicite sua **tag** no canal: <#${F3_PENDENTE}>
+• Confira o **tutorial da corporação** aqui: <#${TUTORIAL}>
+`)
+                .setColor(0x00FF00)
+                .setFooter({ text: 'Polícia Federal - DRP' });
+
+            await approvedChannel.send({ content: `${member}`, embeds: [embedApproved] });
+        }
+
+        // Reprovar
+        if (interaction.customId.startsWith('reject_')) {
+            if (!interaction.member.roles.cache.has(RECRUITER_ROLE_ID)) {
+                return interaction.reply({ content: 'Você não tem permissão.', ephemeral: true });
+            }
+
+            const targetUserId = interaction.customId.split('_')[1];
+            const member = await interaction.guild.members.fetch(targetUserId);
+            if (!member) return interaction.reply({ content: 'Membro não encontrado.', ephemeral: true });
+
+            await interaction.update({ content: 'Reprovado!', components: [], embeds: [] });
+
+            const rejectedChannel = await client.channels.fetch(APPROVED_CHANNEL_ID);
+
+            const embedRejected = new EmbedBuilder()
+                .setTitle(`${ICON_PF} Formulário Reprovado`)
+                .setDescription(`
+Olá ${member}, infelizmente suas respostas estavam incorretas.  
+
+📌 **Próximos passos:**
+• Leia atentamente as regras no site:  
+🔗 https://distritoroleplay.com/regras
+• Refaça o formulário após se preparar melhor.
+`)
+                .setColor(0xFF0000)
+                .setFooter({ text: 'Polícia Federal - DRP' });
+
+            await rejectedChannel.send({ content: `${member}`, embeds: [embedRejected] });
         }
 
     } catch (err) {
         console.error('Erro ao processar interação:', err);
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({ content: 'Erro interno no formulário.', ephemeral: true }).catch(()=>null);
+        }
     }
 }
