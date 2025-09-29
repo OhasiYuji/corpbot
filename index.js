@@ -5,7 +5,7 @@ import { painelHorasHandler, sendPainelHoras } from './commands/painelHoras.js';
 import { formularioHandler, enviarPainelFormulario } from './commands/formulario.js';
 // ----------------------------------------------------
 // IMPORTAÇÃO CORRIGIDA: Importe o handler do ponto
-import { voiceStateHandler } from './voiceState.js'; // Ajuste o caminho se o arquivo não se chamar 'voiceState.js'
+import { voiceStateHandler } from './commands/batePonto.js'; 
 // ----------------------------------------------------
 
 
