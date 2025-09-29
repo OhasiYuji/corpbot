@@ -11,34 +11,42 @@ import {
 import { getUsuariosTodos } from '../utils/sheets.js'; 
 
 const FORM_CHANNEL_ID = '1390033258309357577';
-const RESPONSES_CHANNEL_ID = '1390033258477125632'; // Recebe o painel de respostas com os botões
-const APPROVED_CHANNEL_ID = '1390033258309357578'; // 👈 NOVO ID/LOG: Recebe o EMBED de notificação de Aprovado/Reprovado
-const RECRUITER_ROLE_ID = '1390033256640024594'; // ID do Cargo de Recrutador/Staff
+const RESPONSES_CHANNEL_ID = '1390033258477125632'; 
+const APPROVED_CHANNEL_ID = '1390033258309357578'; 
+const RECRUITER_ROLE_ID = '1390033256640024594';
 const ICON_PF = '<:iconepf:1399436333071728730>';
 
 // ID da Categoria onde os canais de formulário serão criados
 const FORM_CATEGORY_ID = '1390033258309357576'; 
 
+// NOVOS IDS DE CARGOS A SEREM ATRIBUÍDOS NA APROVAÇÃO
+const ROLES_TO_ADD_ON_APPROVAL = [
+    '1390033256652476596', 
+    '1390033256652476595', 
+    '1390033256652476594', 
+    '1390033256652476592'
+];
+
 const QUESTIONS = [
-  '1º • Qual sua idade?',
-  '2º • Qual o seu id no jogo?',
-  '3º • Qual sua intenção em entrar na policia federal?',
-  '4º • O que é RP e ANTI-RP?',
-  '5º • O que é RDM e VDM?',
-  '6º • O que é ter amor a vida?',
-  '7º • O que é car jacking?',
-  '8º • O que é ninja jacking?',
-  '9º • O que é DarkRP?',
-  '10º • O que são áreas verdes, neutras e vermelhas?',
-  '11º • Qual patente mínima necessária para iniciar uma patrulha?',
-  '12º • Quantos policiais são necessários para iniciar a patrulha?',
-  '13º • Quando é permitido atirar em uma perseguição?',
-  '14º • Como deve ser a conduta de abordagem?',
-  '15º • Qual o máximo de artigos que uma pessoa pode ser presa?',
-  '16º • Você pode abordar trabalhador? Se sim, quando?',
-  '17º • Quando deve ser usado o taser?',
-  '18º • Como deve ser o nome à paisana e o nome em patrulha?',
-  '19º • Pode prender morto? Se sim, quando?'
+    '1º • Qual sua idade?',
+    '2º • Qual o seu id no jogo?',
+    '3º • Qual sua intenção em entrar na policia federal?',
+    '4º • O que é RP e ANTI-RP?',
+    '5º • O que é RDM e VDM?',
+    '6º • O que é ter amor a vida?',
+    '7º • O que é car jacking?',
+    '8º • O que é ninja jacking?',
+    '9º • O que é DarkRP?',
+    '10º • O que são áreas verdes, neutras e vermelhas?',
+    '11º • Qual patente mínima necessária para iniciar uma patrulha?',
+    '12º • Quantos policiais são necessários para iniciar a patrulha?',
+    '13º • Quando é permitido atirar em uma perseguição?',
+    '14º • Como deve ser a conduta de abordagem?',
+    '15º • Qual o máximo de artigos que uma pessoa pode ser presa?',
+    '16º • Você pode abordar trabalhador? Se sim, quando?',
+    '17º • Quando deve ser usado o taser?',
+    '18º • Como deve ser o nome à paisana e o nome em patrulha?',
+    '19º • Pode prender morto? Se sim, quando?'
 ];
 
 /**
@@ -199,11 +207,30 @@ export async function formularioHandler(client, interaction) {
 
         await interaction.deferUpdate();
         
+        // --- ATRIBUIÇÃO DE CARGOS NA APROVAÇÃO ---
+        if (isApproved && member) {
+            try {
+                // Adiciona todos os cargos da lista ao membro
+                await member.roles.add(ROLES_TO_ADD_ON_APPROVAL, 'Aprovação de Formulário');
+                console.log(`Cargos ${ROLES_TO_ADD_ON_APPROVAL.join(', ')} atribuídos a ${member.user.tag}`);
+
+            } catch (error) {
+                console.error(`Erro ao adicionar cargos ao membro ${member.user.tag}:`, error);
+                
+                // Notifica o recrutador sobre a falha na atribuição de cargos
+                await interaction.followUp({ 
+                    content: `⚠️ **AVISO:** Falha ao adicionar os cargos ao membro ${member}. Verifique as permissões e hierarquia de cargos do bot.`, 
+                    ephemeral: true 
+                });
+            }
+        }
+        // ------------------------------------
+
         // 1. Notifica o usuário por DM
         if (member) {
             try {
                 const dmMessage = isApproved 
-                    ? `Parabéns! Seu formulário foi **APROVADO** por ${interaction.user.tag}. Aguarde instruções para o próximo passo.`
+                    ? `Parabéns! Seu formulário foi **APROVADO** por ${interaction.user.tag}. Você recebeu os cargos necessários! Aguarde instruções para o próximo passo.`
                     : `Sentimos muito, mas seu formulário foi **REPROVADO** por ${interaction.user.tag}. Leia as regras em: https://distritoroleplay.com/regras. E tente novamente!`;
                     
                 member.send(dmMessage).catch(() => console.log(`Não foi possível enviar DM para ${member.user.tag}`));
@@ -224,7 +251,7 @@ export async function formularioHandler(client, interaction) {
             components: [] // Remove os botões
         });
         
-        // 3. Envia o EMBED de notificação de status para o canal APPROVED_CHANNEL_ID (1390033258309357578)
+        // 3. Envia o EMBED de notificação de status para o canal APPROVED_CHANNEL_ID (LOG)
         const logChannel = await client.channels.fetch(APPROVED_CHANNEL_ID).catch(() => null);
         
         if (logChannel) {
