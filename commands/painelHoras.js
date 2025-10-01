@@ -65,20 +65,78 @@ export async function painelHorasHandler(client, interaction) {
 
     // BOTÕES
     if (interaction.isButton()) {
-      // CONSULTAR
-      if (interaction.customId === 'consultar_horas') {
-        await interaction.deferReply({ flags: 64 });
-        const usuarios = await getUsuariosTodos();
-        if (!usuarios.length) return interaction.editReply({ content: 'Nenhum usuário registrado.' });
+// Função auxiliar para converter minutos em formato "Hh Mm"
+function formatarMinutos(totalMinutos) {
+    if (typeof totalMinutos !== 'number' || totalMinutos < 0) {
+        return '0m';
+    }
+    
+    // Calcula as horas e os minutos restantes
+    const horas = Math.floor(totalMinutos / 60);
+    const minutos = totalMinutos % 60;
 
-        const embed = new EmbedBuilder().setTitle(`${ICON} Horas dos Usuários`).setColor(0x00FF00);
-        if (usuarios.length <= 20) {
-          usuarios.forEach(u => embed.addFields({ name: u.nome || u.userId, value: `<@${u.userId}> — **${u.minutos} minutos**`, inline: false }));
-        } else {
-          embed.setDescription(usuarios.map(u => `<@${u.userId}> — **${u.minutos} minutos**`).join('\n'));
-        }
-        return interaction.editReply({ embeds: [embed] });
-      }
+    let partes = [];
+    if (horas > 0) {
+        partes.push(`${horas}h`);
+    }
+    if (minutos > 0 || totalMinutos === 0) { // Garante que 0 minutos seja exibido como 0m
+        partes.push(`${minutos}m`);
+    }
+    
+    // Se for 0 total, retorna '0h 0m' ou apenas '0m' dependendo da preferência.
+    // Aqui, preferimos a representação completa se não for zero, ou '0m' se for.
+    if (totalMinutos === 0) return '0m'; 
+    
+    return partes.join(' ');
+}
+
+
+// A sua lógica dentro do listener de interações
+if (interaction.customId === 'consultar_horas') {
+    await interaction.deferReply({ flags: 64 });
+    const usuarios = await getUsuariosTodos(); // Assume que retorna [{ userId: '...', minutos: N, nome: '...' }, ...]
+    
+    if (!usuarios || !usuarios.length) {
+        return interaction.editReply({ content: 'Nenhum usuário registrado.' });
+    }
+
+    // 1. ORDENAR os usuários em ordem decrescente (do maior número de minutos para o menor)
+    const usuariosRankeados = usuarios.sort((a, b) => b.minutos - a.minutos);
+
+    const embed = new EmbedBuilder()
+        .setTitle(`${ICON} Ranking de Horas`) // Título mais apropriado
+        .setColor(0x00FF00);
+
+    // 2. ITERAR E FORMATAR: Itera a lista ORDENADA e formata o tempo.
+    
+    if (usuariosRankeados.length <= 25) { // Aumentei um pouco para aproveitar melhor os fields
+        usuariosRankeados.forEach((u, index) => {
+            const tempoFormatado = formatarMinutos(u.minutos);
+            const rank = index + 1;
+            
+            // Exemplo: '1. @Nome — **5h 30m** (330 minutos)'
+            embed.addFields({ 
+                name: `${rank}. ${u.nome || u.userId}`, 
+                value: `<@${u.userId}> — **${tempoFormatado}** (${u.minutos} minutos)`, 
+                inline: false 
+            });
+        });
+        
+    } else {
+        // Se a lista for muito longa, usa a descrição
+        const rankingText = usuariosRankeados.map((u, index) => {
+            const tempoFormatado = formatarMinutos(u.minutos);
+            const rank = index + 1;
+            
+            // Exemplo: '1. <@ID> — **5h 30m** (330 minutos)'
+            return `${rank}. <@${u.userId}> — **${tempoFormatado}** (${u.minutos}m)`;
+        }).join('\n');
+        
+        embed.setDescription(rankingText);
+    }
+    
+    return interaction.editReply({ embeds: [embed] });
+}
 
       // ADICIONAR / REMOVER
       if (interaction.customId === 'adicionar_horas' || interaction.customId === 'remover_horas') {
