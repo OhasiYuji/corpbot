@@ -1,4 +1,3 @@
-// commands/painelHoras.js
 import fs from 'fs';
 import path from 'path';
 import {
@@ -18,6 +17,7 @@ const ADMIN_ROLE_ID = process.env.ADMIN_ROLE_ID || '1390033256640024591';
 const UP_CHANNEL_ID = '1390033257533542417'; // Canal onde vai logar o upamento
 const ICON = '<:Policiafederallogo:1399436333071728730>';
 
+// ... (o resto do seu código inicial continua o mesmo, sem alterações)
 function loadMetas() {
   if (process.env.METAS_JSON) {
     try { return JSON.parse(process.env.METAS_JSON); } catch { return []; }
@@ -55,90 +55,90 @@ export async function sendPainelHoras(client) {
   await panelChannel.send({ embeds: [embed], components: [row] }).catch(console.error);
 }
 
+// --- MUDANÇAS COMEÇAM AQUI ---
+
+/**
+ * Função auxiliar que divide um texto longo em pedaços menores que o limite,
+ * tentando não quebrar as linhas no meio.
+ */
+function dividirMensagem(texto, limite) {
+    const linhas = texto.split('\n');
+    const pedacos = [];
+    let pedacoAtual = '';
+
+    for (const linha of linhas) {
+        // Verifica se adicionar a próxima linha vai estourar o limite
+        if (pedacoAtual.length + linha.length + 1 > limite) {
+            // Se for estourar, guardamos o pedaço que já montamos
+            if (pedacoAtual.length > 0) pedacos.push(pedacoAtual);
+            // E começamos um novo pedaço com a linha atual
+            pedacoAtual = linha + '\n';
+        } else {
+            // Se ainda couber, só adicionamos a linha no pedaço atual
+            pedacoAtual += linha + '\n';
+        }
+    }
+
+    // Não esquecer de guardar o último pedaço que sobrou
+    if (pedacoAtual.length > 0) {
+        pedacos.push(pedacoAtual);
+    }
+
+    return pedacos;
+}
+
+
 export async function painelHorasHandler(client, interaction) {
   try {
     if (!interaction.isButton() && interaction.type !== InteractionType.ModalSubmit) return;
 
     if (interaction.isButton() && !interaction.member.roles.cache.has(ADMIN_ROLE_ID)) {
-      return interaction.reply({ content: 'Você não tem permissão.', flags: 64 });
+      return interaction.reply({ content: 'Você não tem permissão.', ephemeral: true }); // Usando ephemeral para discrição
     }
 
     // BOTÕES
     if (interaction.isButton()) {
-// Função auxiliar para converter minutos em formato "Hh Mm"
-function formatarMinutos(totalMinutos) {
-    if (typeof totalMinutos !== 'number' || totalMinutos < 0) {
-        return '0m';
-    }
-    
-    // Calcula as horas e os minutos restantes
-    const horas = Math.floor(totalMinutos / 60);
-    const minutos = totalMinutos % 60;
-
-    let partes = [];
-    if (horas > 0) {
-        partes.push(`${horas}h`);
-    }
-    if (minutos > 0 || totalMinutos === 0) { // Garante que 0 minutos seja exibido como 0m
-        partes.push(`${minutos}m`);
-    }
-    
-    // Se for 0 total, retorna '0h 0m' ou apenas '0m' dependendo da preferência.
-    // Aqui, preferimos a representação completa se não for zero, ou '0m' se for.
-    if (totalMinutos === 0) return '0m'; 
-    
-    return partes.join(' ');
-}
-
-
-// A sua lógica dentro do listener de interações
-if (interaction.customId === 'consultar_horas') {
-    await interaction.deferReply({ flags: 64 });
-    const usuarios = await getUsuariosTodos(); // Assume que retorna [{ userId: '...', minutos: N, nome: '...' }, ...]
-    
-    if (!usuarios || !usuarios.length) {
-        return interaction.editReply({ content: 'Nenhum usuário registrado.' });
-    }
-
-    // 1. ORDENAR os usuários em ordem decrescente (do maior número de minutos para o menor)
-    const usuariosRankeados = usuarios.sort((a, b) => b.minutos - a.minutos);
-
-    const embed = new EmbedBuilder()
-        .setTitle(`${ICON} Ranking de Horas`) // Título mais apropriado
-        .setColor(0x00FF00);
-
-    // 2. ITERAR E FORMATAR: Itera a lista ORDENADA e formata o tempo.
-    
-    if (usuariosRankeados.length <= 25) { // Aumentei um pouco para aproveitar melhor os fields
-        usuariosRankeados.forEach((u, index) => {
-            const tempoFormatado = formatarMinutos(u.minutos);
-            const rank = index + 1;
-            
-            // Exemplo: '1. @Nome — **5h 30m** (330 minutos)'
-            embed.addFields({ 
-                name: `${rank}. ${u.nome || u.userId}`, 
-                value: `<@${u.userId}> — **${tempoFormatado}** (${u.minutos} minutos)`, 
-                inline: false 
-            });
-        });
         
-    } else {
-        // Se a lista for muito longa, usa a descrição
-        const rankingText = usuariosRankeados.map((u, index) => {
+      // Lógica de consultar horas agora usa a divisão de mensagens
+      if (interaction.customId === 'consultar_horas') {
+        await interaction.deferReply({ ephemeral: true });
+        const usuarios = await getUsuariosTodos(); 
+        
+        if (!usuarios || !usuarios.length) {
+            return interaction.editReply({ content: 'Nenhum usuário registrado.' });
+        }
+
+        const usuariosRankeados = usuarios.sort((a, b) => b.minutos - a.minutos);
+        
+        // Criamos o texto completo do ranking
+        let rankingText = `🏆 **Ranking de Horas** 🏆\n\n`;
+        rankingText += usuariosRankeados.map((u, index) => {
             const tempoFormatado = formatarMinutos(u.minutos);
             const rank = index + 1;
-            
-            // Exemplo: '1. <@ID> — **5h 30m** (330 minutos)'
             return `${rank}. <@${u.userId}> — **${tempoFormatado}** (${u.minutos}m)`;
         }).join('\n');
         
-        embed.setDescription(rankingText);
-    }
-    
-    return interaction.editReply({ embeds: [embed] });
-}
+        const LIMITE_POR_MENSAGEM = 2000;
 
-      // ADICIONAR / REMOVER
+        if (rankingText.length <= LIMITE_POR_MENSAGEM) {
+            // Se couber em uma mensagem, envia e pronto.
+            return interaction.editReply({ content: rankingText });
+        } else {
+            // Se não couber, divide e envia em partes.
+            const pedacosDeMensagem = dividirMensagem(rankingText, LIMITE_POR_MENSAGEM);
+            
+            // Envia a primeira parte com editReply (obrigatório após deferReply)
+            await interaction.editReply({ content: pedacosDeMensagem[0] });
+
+            // Envia o resto com followUp
+            for (let i = 1; i < pedacosDeMensagem.length; i++) {
+                await interaction.followUp({ content: pedacosDeMensagem[i], ephemeral: true });
+            }
+            return; // Encerra a execução aqui
+        }
+      }
+
+      // ... (O resto do seu código de botões continua aqui, sem alterações)
       if (interaction.customId === 'adicionar_horas' || interaction.customId === 'remover_horas') {
         const modal = new ModalBuilder()
           .setCustomId(interaction.customId + '_modal')
@@ -166,7 +166,7 @@ if (interaction.customId === 'consultar_horas') {
 
       // LIMPAR HORAS
       if (interaction.customId === 'limpar_horas') {
-        await interaction.deferReply({ flags: 64 });
+        await interaction.deferReply({ ephemeral: true });
         const usuarios = await getUsuariosTodos();
         for (const u of usuarios) {
           await atualizarHorasUsuario(u.userId, -u.minutos);
@@ -208,11 +208,11 @@ if (interaction.customId === 'consultar_horas') {
       }
     }
 
-    // MODALS
+    // ... (O resto do seu código de MODALS continua aqui, sem alterações)
     if (interaction.type === InteractionType.ModalSubmit) {
       // ADICIONAR / REMOVER HORAS
       if (interaction.customId === 'adicionar_horas_modal' || interaction.customId === 'remover_horas_modal') {
-        await interaction.deferReply({ flags: 64 });
+        await interaction.deferReply({ ephemeral: true });
 
         const userId = interaction.fields.getTextInputValue('user_id');
         const minutosRaw = interaction.fields.getTextInputValue('minutos');
@@ -226,13 +226,12 @@ if (interaction.customId === 'consultar_horas') {
 
       // UPAR MANUAL
       if (interaction.customId === 'upar_manual_modal') {
-        await interaction.deferReply({ flags: 64 });
+        await interaction.deferReply({ ephemeral: true });
 
         const userInput = interaction.fields.getTextInputValue('user');
         const roleInput = interaction.fields.getTextInputValue('new_role');
         const motivo = interaction.fields.getTextInputValue('motivo');
 
-        // Pegar membro
         const member = interaction.guild.members.cache.find(m =>
           m.user.tag === userInput.replace('@', '') ||
           m.displayName.toLowerCase() === userInput.toLowerCase() ||
@@ -240,17 +239,12 @@ if (interaction.customId === 'consultar_horas') {
         );
         if (!member) return interaction.editReply({ content: 'Usuário não encontrado.' });
 
-        // Cargo antigo (maior cargo que ele já tem)
         const oldRole = member.roles.highest;
-
-        // Novo cargo pelo nome
         const newRole = interaction.guild.roles.cache.find(r => r.name.toLowerCase() === roleInput.toLowerCase());
         if (!newRole) return interaction.editReply({ content: 'Cargo não encontrado.' });
 
-        // Adicionar cargo
         await member.roles.add(newRole).catch(console.error);
 
-        // Canal de log
         const logChannel = await interaction.guild.channels.fetch(UP_CHANNEL_ID).catch(() => null);
         if (logChannel) {
           await logChannel.send(
@@ -271,10 +265,26 @@ if (interaction.customId === 'consultar_horas') {
       if (interaction.deferred || interaction.replied) {
         return interaction.editReply({ content: 'Erro ao processar.' });
       } else {
-        return interaction.reply({ content: 'Erro ao processar.', flags: 64 });
+        return interaction.reply({ content: 'Erro ao processar.', ephemeral: true });
       }
     } catch (e) {
       console.error('Double error replying to interaction:', e);
     }
   }
 }
+
+// A função formatarMinutos deve ser movida para fora do handler principal
+// para ser uma função de utilidade no escopo do arquivo.
+function formatarMinutos(totalMinutos) {
+  if (typeof totalMinutos !== 'number' || totalMinutos < 0) {
+      return '0m';
+  }
+  const horas = Math.floor(totalMinutos / 60);
+  const minutos = totalMinutos % 60;
+  let partes = [];
+  if (horas > 0) partes.push(`${horas}h`);
+  if (minutos > 0 || totalMinutos === 0) partes.push(`${minutos}m`);
+  if (totalMinutos === 0) return '0m'; 
+  return partes.join(' ');
+}
+
