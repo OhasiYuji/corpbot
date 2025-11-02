@@ -25,7 +25,7 @@ export async function sendTicketPanel(client) {
     .setTitle('📩 Suporte e Tickets')
     .setDescription('Abra um ticket para falar com nossa equipe.\n\nEscolha o tipo de atendimento abaixo:')
     .setColor('#07ff00')
-    .setImage('https://i.imgur.com/8N6c6Hk.png') // Corrigido para o link direto da imagem dentro do álbum
+    .setImage('https://imgur.com/a/HBhapp6') // Corrigido para o link direto da imagem dentro do álbum
     .setFooter({ text: 'Sistema de Atendimento Automático', iconURL: client.user.displayAvatarURL() });
 
   const botoes = new ActionRowBuilder().addComponents(
