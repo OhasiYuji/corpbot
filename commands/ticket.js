@@ -6,28 +6,31 @@ import {
   ChannelType,
   PermissionFlagsBits
 } from 'discord.js';
+
+// Módulos para resolver o caminho relativo corretamente em ESM
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path'; 
 import path from 'path'; 
 
 // ====================================================================
-// ⚠️ CONFIGURAÇÕES DE ID E CAMINHO (Ajuste conforme necessário)
+// ⚠️ CONFIGURAÇÕES DE ID E CAMINHO
 // ====================================================================
+
+// Calcula o __dirname para módulos ES
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// O caminho correto é: do 'commands', volta um nível (..) e entra em 'assets'
+const BANNER_IMAGE_PATH = join(__dirname, '..', 'assets', 'bannerpf.png'); 
+const IMAGE_FILE_NAME = 'bannerpf.png'; // Nome que será usado no attachment
 
 // ID do canal onde o painel de tickets deve aparecer
 const TICKET_PANEL_CHANNEL_ID = '1390033257252389032';
 
-// Categoria para criar os tickets
+// IDs dos cargos e categoria
 const TICKET_CATEGORY_ID = '1390033257252389028'; 
-
-// IDs dos cargos que devem ver os tickets
 const SUPPORTE_ROLE_ID_1 = '1390033256703066160';
 const SUPPORTE_ROLE_ID_2 = '1390033256753135653';
-
-// Caminho absoluto da imagem do banner (usando barras normais para compatibilidade)
-const RAW_PATH = 'C:/Users/T-GAMER/Desktop/DEV/corpbot/assets/bannerpf.png';
-const IMAGE_FILE_NAME = 'bannerpf.png';
-
-// Usa path.normalize para garantir que o caminho esteja formatado corretamente
-const BANNER_IMAGE_PATH = path.normalize(RAW_PATH); 
 
 // ====================================================================
 // ✅ Envia o painel principal
@@ -66,7 +69,7 @@ export async function sendTicketPanel(client) {
   await canal.send({ 
         embeds: [embed], 
         components: [botoes],
-        // Anexa o arquivo local
+        // Anexa o arquivo local usando o caminho relativo/calculado
         files: [{ attachment: BANNER_IMAGE_PATH, name: IMAGE_FILE_NAME }] 
     });
 
@@ -96,15 +99,15 @@ export async function ticketHandler(client, interaction) {
   const canal = await interaction.guild.channels.create({
     name: `ticket-${interaction.user.username}`,
     type: ChannelType.GuildText,
-    parent: TICKET_CATEGORY_ID, // Define a categoria
+    parent: TICKET_CATEGORY_ID, 
     topic: `Ticket de ${interaction.user.tag} (${nomeTipo})`,
     permissionOverwrites: [
       {
-        id: interaction.guild.id, // @everyone (ocultar)
+        id: interaction.guild.id, 
         deny: [PermissionFlagsBits.ViewChannel],
       },
       {
-        id: interaction.user.id, // Criador do ticket (ver e falar)
+        id: interaction.user.id, 
         allow: [
           PermissionFlagsBits.ViewChannel,
           PermissionFlagsBits.SendMessages,
@@ -112,23 +115,22 @@ export async function ticketHandler(client, interaction) {
         ],
       },
       {
-        id: client.user.id, // Bot
+        id: client.user.id, 
         allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
       },
       {
-        id: SUPPORTE_ROLE_ID_1, // Cargo 1 (Ver)
+        id: SUPPORTE_ROLE_ID_1, 
         allow: [PermissionFlagsBits.ViewChannel],
       },
       {
-        id: SUPPORTE_ROLE_ID_2, // Cargo 2 (Ver)
+        id: SUPPORTE_ROLE_ID_2, 
         allow: [PermissionFlagsBits.ViewChannel],
       },
       {
-        // Permissão de Administrador: quem tiver a permissão ADMINISTRATOR pode ver.
-        // O ID do cargo @everyone é usado como alvo para aplicar a permissão de administrador.
+        // Permite que administradores vejam o ticket
         id: interaction.guild.roles.everyone, 
         allow: [PermissionFlagsBits.Administrator],
-        deny: [PermissionFlagsBits.ViewChannel], // Mantém o @everyone sem permissão de ver
+        deny: [PermissionFlagsBits.ViewChannel], 
       }
     ],
   });
@@ -151,7 +153,6 @@ export async function ticketHandler(client, interaction) {
       .setStyle(ButtonStyle.Danger)
   );
 
-  // Menção os cargos de suporte e o criador
   const mentionSuporte = `<@&${SUPPORTE_ROLE_ID_1}> <@&${SUPPORTE_ROLE_ID_2}>`;
   await canal.send({ content: `${mentionSuporte}\n<@${interaction.user.id}>`, embeds: [embed], components: [fecharBtn] });
   
@@ -162,9 +163,14 @@ export async function ticketHandler(client, interaction) {
 // ✅ Fecha ticket
 // ====================================================================
 export async function closeTicket(interaction) {
-  // Verifica se o usuário tem permissão para fechar (criador, ou um dos cargos de suporte/admin)
+  // Regex para extrair o ID do usuário do tópico do canal (ex: 'Ticket de User#1234 (Suporte)')
+  const topicParts = interaction.channel.topic ? interaction.channel.topic.split(' ') : [];
+  const creatorTag = topicParts.length > 2 ? topicParts[2] : null;
+
+  const isCreator = creatorTag && interaction.user.tag === creatorTag.replace('(', '').replace(')', '');
+  
   const hasPermission = 
-    interaction.user.id === interaction.channel.topic.split(' ')[2] || // Verifica se é o criador
+    isCreator || 
     interaction.member.roles.cache.has(SUPPORTE_ROLE_ID_1) ||
     interaction.member.roles.cache.has(SUPPORTE_ROLE_ID_2) ||
     interaction.member.permissions.has(PermissionFlagsBits.Administrator);
