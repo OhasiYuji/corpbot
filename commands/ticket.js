@@ -6,16 +6,32 @@ import {
   ChannelType,
   PermissionFlagsBits
 } from 'discord.js';
+import path from 'path'; 
+
+// ====================================================================
+// ⚠️ CONFIGURAÇÕES DE ID E CAMINHO (Ajuste conforme necessário)
+// ====================================================================
 
 // ID do canal onde o painel de tickets deve aparecer
 const TICKET_PANEL_CHANNEL_ID = '1390033257252389032';
 
-// ⚠️ NOVOS IDs
-const TICKET_CATEGORY_ID = '1390033257252389028'; // Categoria para criar os tickets
+// Categoria para criar os tickets
+const TICKET_CATEGORY_ID = '1390033257252389028'; 
+
+// IDs dos cargos que devem ver os tickets
 const SUPPORTE_ROLE_ID_1 = '1390033256703066160';
 const SUPPORTE_ROLE_ID_2 = '1390033256753135653';
 
+// Caminho absoluto da imagem do banner (usando barras normais para compatibilidade)
+const RAW_PATH = 'C:/Users/T-GAMER/Desktop/DEV/corpbot/assets/bannerpf.png';
+const IMAGE_FILE_NAME = 'bannerpf.png';
+
+// Usa path.normalize para garantir que o caminho esteja formatado corretamente
+const BANNER_IMAGE_PATH = path.normalize(RAW_PATH); 
+
+// ====================================================================
 // ✅ Envia o painel principal
+// ====================================================================
 export async function sendTicketPanel(client) {
   const canal = await client.channels.fetch(TICKET_PANEL_CHANNEL_ID).catch(() => null);
   if (!canal) return console.log('⚠️ Canal de tickets não encontrado.');
@@ -25,7 +41,8 @@ export async function sendTicketPanel(client) {
     .setTitle('📩 Suporte e Tickets')
     .setDescription('Abra um ticket para falar com nossa equipe.\n\nEscolha o tipo de atendimento abaixo:')
     .setColor('#07ff00')
-    .setImage('../assets\bannerpf.png') // Corrigido para o link direto da imagem dentro do álbum
+    // Aponta para o nome do arquivo que será anexado na mensagem
+    .setImage(`attachment://${IMAGE_FILE_NAME}`) 
     .setFooter({ text: 'Sistema de Atendimento Automático', iconURL: client.user.displayAvatarURL() });
 
   const botoes = new ActionRowBuilder().addComponents(
@@ -45,12 +62,20 @@ export async function sendTicketPanel(client) {
 
   // Limpa e reenviando
   await canal.bulkDelete(5).catch(() => null);
-  await canal.send({ embeds: [embed], components: [botoes] });
+  
+  await canal.send({ 
+        embeds: [embed], 
+        components: [botoes],
+        // Anexa o arquivo local
+        files: [{ attachment: BANNER_IMAGE_PATH, name: IMAGE_FILE_NAME }] 
+    });
 
   console.log('🎟️ Painel de tickets enviado!');
 }
 
+// ====================================================================
 // ✅ Cria ticket
+// ====================================================================
 export async function ticketHandler(client, interaction) {
   const tipo = interaction.customId.split('_')[1];
   const nomeTipo =
@@ -71,15 +96,15 @@ export async function ticketHandler(client, interaction) {
   const canal = await interaction.guild.channels.create({
     name: `ticket-${interaction.user.username}`,
     type: ChannelType.GuildText,
-    parent: TICKET_CATEGORY_ID, // ⬅️ DEFINIÇÃO DA CATEGORIA
+    parent: TICKET_CATEGORY_ID, // Define a categoria
     topic: `Ticket de ${interaction.user.tag} (${nomeTipo})`,
     permissionOverwrites: [
       {
-        id: interaction.guild.id, // Permissões para @everyone (ocultar)
+        id: interaction.guild.id, // @everyone (ocultar)
         deny: [PermissionFlagsBits.ViewChannel],
       },
       {
-        id: interaction.user.id, // Permissões para o criador (ver e falar)
+        id: interaction.user.id, // Criador do ticket (ver e falar)
         allow: [
           PermissionFlagsBits.ViewChannel,
           PermissionFlagsBits.SendMessages,
@@ -87,21 +112,23 @@ export async function ticketHandler(client, interaction) {
         ],
       },
       {
-        id: client.user.id, // Permissões para o bot
+        id: client.user.id, // Bot
         allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
       },
       {
-        id: SUPPORTE_ROLE_ID_1, // ⬅️ Permissão para Cargo 1
+        id: SUPPORTE_ROLE_ID_1, // Cargo 1 (Ver)
         allow: [PermissionFlagsBits.ViewChannel],
       },
       {
-        id: SUPPORTE_ROLE_ID_2, // ⬅️ Permissão para Cargo 2
+        id: SUPPORTE_ROLE_ID_2, // Cargo 2 (Ver)
         allow: [PermissionFlagsBits.ViewChannel],
       },
       {
-        id: interaction.guild.roles.everyone, // Permissão para Administradores
+        // Permissão de Administrador: quem tiver a permissão ADMINISTRATOR pode ver.
+        // O ID do cargo @everyone é usado como alvo para aplicar a permissão de administrador.
+        id: interaction.guild.roles.everyone, 
         allow: [PermissionFlagsBits.Administrator],
-        deny: [PermissionFlagsBits.ViewChannel], // Garante que a regra geral do @everyone continue a ocultar
+        deny: [PermissionFlagsBits.ViewChannel], // Mantém o @everyone sem permissão de ver
       }
     ],
   });
@@ -124,20 +151,34 @@ export async function ticketHandler(client, interaction) {
       .setStyle(ButtonStyle.Danger)
   );
 
-  // Adiciona a menção dos cargos de suporte (opcional, mas útil para notificar)
+  // Menção os cargos de suporte e o criador
   const mentionSuporte = `<@&${SUPPORTE_ROLE_ID_1}> <@&${SUPPORTE_ROLE_ID_2}>`;
   await canal.send({ content: `${mentionSuporte}\n<@${interaction.user.id}>`, embeds: [embed], components: [fecharBtn] });
   
   await interaction.reply({ content: `✅ Ticket criado com sucesso: ${canal}`, ephemeral: true });
 }
 
+// ====================================================================
 // ✅ Fecha ticket
+// ====================================================================
 export async function closeTicket(interaction) {
+  // Verifica se o usuário tem permissão para fechar (criador, ou um dos cargos de suporte/admin)
+  const hasPermission = 
+    interaction.user.id === interaction.channel.topic.split(' ')[2] || // Verifica se é o criador
+    interaction.member.roles.cache.has(SUPPORTE_ROLE_ID_1) ||
+    interaction.member.roles.cache.has(SUPPORTE_ROLE_ID_2) ||
+    interaction.member.permissions.has(PermissionFlagsBits.Administrator);
+
   if (!interaction.channel.name.startsWith('ticket-')) {
     await interaction.reply({ content: '❌ Esse comando só pode ser usado dentro de um ticket.', ephemeral: true });
     return;
   }
 
+  if (!hasPermission) {
+    await interaction.reply({ content: '❌ Você não tem permissão para fechar este ticket.', ephemeral: true });
+    return;
+  }
+  
   await interaction.reply({ content: '🕐 Fechando ticket em 5 segundos...', ephemeral: true });
   setTimeout(() => interaction.channel.delete().catch(() => null), 5000);
 }
