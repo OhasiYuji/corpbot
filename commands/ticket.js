@@ -67,11 +67,11 @@ export async function sendTicketPanel(client) {
   await canal.bulkDelete(5).catch(() => null);
   
   await canal.send({ 
-        embeds: [embed], 
-        components: [botoes],
-        // Anexa o arquivo local usando o caminho relativo/calculado
-        files: [{ attachment: BANNER_IMAGE_PATH, name: IMAGE_FILE_NAME }] 
-    });
+        embeds: [embed], 
+        components: [botoes],
+        // Anexa o arquivo local usando o caminho relativo/calculado
+        files: [{ attachment: BANNER_IMAGE_PATH, name: IMAGE_FILE_NAME }] 
+    });
 
   console.log('🎟️ Painel de tickets enviado!');
 }
@@ -103,10 +103,12 @@ export async function ticketHandler(client, interaction) {
     topic: `Ticket de ${interaction.user.tag} (${nomeTipo})`,
     permissionOverwrites: [
       {
+        // 1. Nega @everyone de ver
         id: interaction.guild.id, 
         deny: [PermissionFlagsBits.ViewChannel],
       },
       {
+        // 2. Permite o criador do ticket
         id: interaction.user.id, 
         allow: [
           PermissionFlagsBits.ViewChannel,
@@ -115,23 +117,21 @@ export async function ticketHandler(client, interaction) {
         ],
       },
       {
+        // 3. Permite o Bot
         id: client.user.id, 
         allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
       },
       {
+        // 4. Permite Cargo 1 (Ver e Falar)
         id: SUPPORTE_ROLE_ID_1, 
-        allow: [PermissionFlagsBits.ViewChannel],
+        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
       },
       {
+        // 5. Permite Cargo 2 (Ver e Falar)
         id: SUPPORTE_ROLE_ID_2, 
-        allow: [PermissionFlagsBits.ViewChannel],
-      },
-      {
-        // Permite que administradores vejam o ticket
-        id: interaction.guild.roles.everyone, 
-        allow: [PermissionFlagsBits.Administrator],
-        deny: [PermissionFlagsBits.ViewChannel], 
+        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
       }
+      // Administradores já veem o canal automaticamente, não precisam de regra.
     ],
   });
 
@@ -163,17 +163,19 @@ export async function ticketHandler(client, interaction) {
 // ✅ Fecha ticket
 // ====================================================================
 export async function closeTicket(interaction) {
-  // Regex para extrair o ID do usuário do tópico do canal (ex: 'Ticket de User#1234 (Suporte)')
-  const topicParts = interaction.channel.topic ? interaction.channel.topic.split(' ') : [];
-  const creatorTag = topicParts.length > 2 ? topicParts[2] : null;
+// Por padrão, qualquer um pode clicar no botão de fechar, mas queremos restringir isso.
 
-  const isCreator = creatorTag && interaction.user.tag === creatorTag.replace('(', '').replace(')', '');
+// Tenta extrair a tag do usuário do tópico do canal
+  const topicParts = interaction.channel.topic ? interaction.channel.topic.split(' ') : [];
+  const creatorTag = topicParts.length > 2 ? topicParts[2].replace('(', '').replace(')', '') : null;
+
+  const isCreator = creatorTag && interaction.user.tag === creatorTag;
   
   const hasPermission = 
-    isCreator || 
-    interaction.member.roles.cache.has(SUPPORTE_ROLE_ID_1) ||
-    interaction.member.roles.cache.has(SUPPORTE_ROLE_ID_2) ||
-    interaction.member.permissions.has(PermissionFlagsBits.Administrator);
+    isCreator || // O criador do ticket
+    interaction.member.roles.cache.has(SUPPORTE_ROLE_ID_1) || // Cargo 1
+    interaction.member.roles.cache.has(SUPPORTE_ROLE_ID_2) || // Cargo 2
+    interaction.member.permissions.has(PermissionFlagsBits.Administrator); // Admin
 
   if (!interaction.channel.name.startsWith('ticket-')) {
     await interaction.reply({ content: '❌ Esse comando só pode ser usado dentro de um ticket.', ephemeral: true });
