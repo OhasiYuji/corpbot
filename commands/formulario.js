@@ -16,7 +16,7 @@ const FORM_CHANNEL_ID = '1390033258309357577';
 const RESPONSES_CHANNEL_ID = '1390033258477125632';
 const APPROVED_CHANNEL_ID = '1390033258309357578';
 const RECRUITER_ROLE_ID = '1390033256640024594';
-const ICON_PF = '<:iconepf:1399436333071728730>';
+const ICON_PF = '<:medalha:1407068603299139786>';
 
 // ID da Categoria onde os canais de formulário serão criados
 const FORM_CATEGORY_ID = '1390033258309357576';
@@ -25,14 +25,14 @@ const FORM_CATEGORY_ID = '1390033258309357576';
 const ROLES_TO_ADD_ON_APPROVAL = [
     '1390033256652476596',
     '1390033256652476595',
-    '1390033256652476594',
-    '1390033256652476592'
+    '1390033256652476592',
+    '1390033256652476594'
 ];
 
 const QUESTIONS = [
     '1º • Qual sua idade?',
     '2º • Qual o seu id no jogo?',
-    '3º • Qual sua intenção em entrar na policia federal?',
+    '3º • Qual sua intenção em entrar na PMMG?',
     '4º • O que é RP e ANTI-RP?',
     '5º • O que é RDM e VDM?',
     '6º • O que é ter amor a vida?',

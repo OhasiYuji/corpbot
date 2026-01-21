@@ -15,7 +15,7 @@ import { getUsuariosTodos, atualizarHorasUsuario, getCargosFromEnvOrFile } from 
 const PANEL_CHANNEL_ID = process.env.PANEL_CHANNEL_ID || '1390160577095012433';
 const ADMIN_ROLE_ID = process.env.ADMIN_ROLE_ID || '1390033256640024591';
 const UP_CHANNEL_ID = '1390033257533542417'; // Canal onde vai logar o upamento
-const ICON = '<:Policiafederallogo:1399436333071728730>';
+const ICON = '<:medalha:1407068603299139786>';
 
 // ... (o resto do seu código inicial continua o mesmo, sem alterações)
 function loadMetas() {
@@ -248,7 +248,7 @@ export async function painelHorasHandler(client, interaction) {
         const logChannel = await interaction.guild.channels.fetch(UP_CHANNEL_ID).catch(() => null);
         if (logChannel) {
           await logChannel.send(
-            `DPF - UPAMENTO ${ICON}\n\n` +
+            `PMMG - UPAMENTO ${ICON}\n\n` +
             `Membro: <@${member.id}>\n` +
             `Cargo antigo: <@&${oldRole.id}>\n` +
             `Novo cargo: <@&${newRole.id}>\n` +

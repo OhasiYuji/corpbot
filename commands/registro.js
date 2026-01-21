@@ -13,8 +13,8 @@ import { registrarUsuario } from '../utils/sheets.js';
 // Constantes
 const PANEL_CHANNEL_ID = process.env.REGISTER_PANEL_CHANNEL_ID || '1396852912709308426';
 const LOG_CHANNEL_ID = '1390033258821062760'; // Canal que recebe a notificação de registro
-const ICON = '<:Policiafederallogo:1399436333071728730>';
-const ICON_PF = '<:iconepf:1399436333071728730>'; 
+const ICON = '<:medalha:1407068603299139786>';
+const ICON_PF = '<:medalha:1407068603299139786>'; 
 
 /**
  * Envia o painel inicial de registro, limpando o canal antes para evitar duplicidade.
@@ -53,7 +53,7 @@ async function sendRegistroLog(client, user, nome, idJogo, login) {
     const logChannel = await client.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
     if (!logChannel) return;
 
-    const tag = "DPF - DRP"; 
+    const tag = "PMMG - DRP"; 
 
     // Mensagem formatada com as variáveis corretas
     const logMessage = 
@@ -122,7 +122,7 @@ export async function registroHandler(client, interaction) {
             // 2. ALTERAÇÃO DO APELIDO (MANTIDO)
             try {
                 // Padrão: DPF » [Nickname] ([ID do Jogo])
-                await interaction.member.setNickname(`DPF » ${nome} (${idJogo})`).catch(() => null);
+                await interaction.member.setNickname(`PMMG » ${nome} (${idJogo})`).catch(() => null);
             } catch {}
 
             // 3. Envio do log formatado

@@ -3,7 +3,7 @@ import { atualizarHorasUsuario, getUsuario, getCargos } from '../utils/sheets.js
 // ** Certifique-se de que estes IDs e o ÍCONE estão corretos **
 const CATEGORY_VOICE_ID = '1390033257910894599'; // Categoria a ser monitorada
 const LOG_CHANNEL_ID = '1390161145037590549';     // Canal de log
-const ICON = '<:Policiafederallogo:1399436333071728730>';
+const ICON = '<:medalha:1407068603299139786>';
 
 const usersInPoint = new Map();
 const messagesInPoint = new Map();
