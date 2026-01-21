@@ -12,7 +12,7 @@ import { registrarUsuario } from '../utils/sheets.js';
 
 // Constantes
 const PANEL_CHANNEL_ID = process.env.REGISTER_PANEL_CHANNEL_ID || '1396852912709308426';
-const LOG_CHANNEL_ID = '1390033258821062760'; // Canal que recebe a notificação de registro
+const LOG_CHANNEL_ID = '1463503382449754122'; // Canal que recebe a notificação de registro
 const ICON = '<:medalha:1407068603299139786>';
 const ICON_PF = '<:medalha:1407068603299139786>'; 
 
