@@ -59,7 +59,7 @@ async function sendRegistroLog(client, user, nome, idJogo, login) {
         `${ICON_PF} **NICKNAME:** ${nome}\n` +
         `${ICON_PF} **LOGIN:** ${login}\n` +
         `${ICON_PF} **ID:** ${idJogo}\n` +
-        `${ICON_PF} **MARCAÇÃO:** <@${1399883634210508862}>\n`;
+        `${ICON_PF} **MARCAÇÃO:** <@&1399883634210508862>\n`;
     
     logChannel.send({ content: logMessage }).catch(console.error);
 }
