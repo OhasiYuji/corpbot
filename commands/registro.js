@@ -115,8 +115,12 @@ export async function registroHandler(client, interaction) {
             // 1. REGISTRO NA PLANILHA (MANTIDO)
             const result = await registrarUsuario(interaction.user.id, nome, idJogo, login);
             
-            if (!result) {
+            if (result === false) {
                 return interaction.editReply({ content: 'Você já está registrado.' });
+            }
+
+            if (result === null) {
+                return interaction.editReply({ content: 'Erro interno ao acessar a planilha. Verifique os logs.' });
             }
 
             // 2. ALTERAÇÃO DO APELIDO (MANTIDO)

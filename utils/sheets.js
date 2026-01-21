@@ -46,7 +46,7 @@ export async function getUsuariosTodos() {
   try {
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'usuarios!A:F'
+      range: 'Usuarios!A:F'
     });
     const values = res.data.values || [];
     if (!values.length) return [];
@@ -74,7 +74,7 @@ export async function atualizarHorasUsuario(userId, minutosDelta) {
   try {
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'usuarios!A:F'
+      range: 'Usuarios!A:F'
     });
     const values = res.data.values || [];
     const start = looksLikeHeader(values[0] || []) ? 1 : 0;
@@ -86,7 +86,7 @@ export async function atualizarHorasUsuario(userId, minutosDelta) {
       const initial = Math.max(0, minutosDelta);
       await sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
-        range: 'usuarios!A:F',
+        range: 'Usuarios!A:F',
         valueInputOption: 'RAW',
         requestBody: { values: [[userId, '', '', '', '0', String(initial)]] }
       });
@@ -100,7 +100,7 @@ export async function atualizarHorasUsuario(userId, minutosDelta) {
 
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `usuarios!F${absoluteRow}`,
+      range: `Usuarios!F${absoluteRow}`,
       valueInputOption: 'RAW',
       requestBody: { values: [[String(updated)]] }
     });
@@ -118,7 +118,7 @@ export async function registrarUsuario(userId, nome = '', idEmJogo = '', login =
     if (usuarios.find(u => u.userId === userId)) return false;
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'usuarios!A:F',
+      range: 'Usuarios!A:F',
       valueInputOption: 'RAW',
       requestBody: { values: [[userId, nome, idEmJogo, login, '0', '0']] }
     });
