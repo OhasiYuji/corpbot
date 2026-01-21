@@ -53,15 +53,13 @@ async function sendRegistroLog(client, user, nome, idJogo, login) {
     const logChannel = await client.channels.fetch(LOG_CHANNEL_ID).catch(() => null);
     if (!logChannel) return;
 
-    const tag = "PMMG - DRP"; 
-
     // Mensagem formatada com as variáveis corretas
     const logMessage = 
         `${ICON_PF} **NOME:** <@${user.id}>\n` +
         `${ICON_PF} **NICKNAME:** ${nome}\n` +
         `${ICON_PF} **LOGIN:** ${login}\n` +
         `${ICON_PF} **ID:** ${idJogo}\n` +
-        `${ICON_PF} **TAG:** ${tag}`;
+        `${ICON_PF} **MARCAÇÃO:** <@${1399883634210508862}>\n`;
     
     logChannel.send({ content: logMessage }).catch(console.error);
 }
