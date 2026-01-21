@@ -235,7 +235,7 @@ export async function formularioHandler(client, interaction) {
             if (logChannel) {
                 let descriptionText = `O formulário de **${member ? member.user.tag : `ID: ${userId}`}** (<@${userId}>) foi processado.`;
                 if (isApproved) {
-                    descriptionText += `\n\n**PRÓXIMOS PASSOS:**\n1. Registre-se no canal: <#1396852912709308426>\n2. Solicite sua tag no canal: <#1399875114660532244>`;
+                    descriptionText += `\n\n**PRÓXIMOS PASSOS:**\n1. Registre-se no canal: <#1396852912709308426>\n2. Pegue o seu código de convite no canal: <#1463503382449754122>`;
                 }
                 const logEmbed = new EmbedBuilder()
                     .setTitle(`${statusIcon} Candidato ${action}`)
