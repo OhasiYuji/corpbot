@@ -31,16 +31,11 @@ async function enviarPainel(client) {
     }
 
     const embed = new EmbedBuilder()
-        .setAuthor({ name: 'BOPE | GESTÃO DE EFETIVO', iconURL: client.user.displayAvatarURL() })
+        .setAuthor({ name: 'PMMG | GESTÃO DE EFETIVO', iconURL: client.user.displayAvatarURL() })
         .setDescription(`
         **CENTRAL DE CONTROLE DE PONTO**
 
         Painel administrativo para monitoramento de horas, ranking de atividade e ajustes manuais de folha de ponto. O uso indevido destas ferramentas é passível de punição.
-
-        \`\`\`ml
-        STATUS: RESTRITO
-        PERMISSAO: COMANDO
-        \`\`\`
 
         > **FUNÇÕES:**
         > Utilize os terminais abaixo para gerenciar o banco de dados de horas da corporação.
