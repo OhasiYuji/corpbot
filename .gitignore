@@ -1,10 +1,2 @@
-# env
-.env
-credentials.json
-
-# node
 node_modules/
-
-# logs / build
-*.log
-dist/
+.env

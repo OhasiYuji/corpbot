@@ -1,22 +1,26 @@
 {
   "name": "corpbot",
   "version": "1.0.0",
-  "type": "module",
+  "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OhasiYuji/corpbot.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/OhasiYuji/corpbot/issues"
+  },
+  "homepage": "https://github.com/OhasiYuji/corpbot#readme",
   "dependencies": {
-    "discord.js": "^14.22.1",
-    "dotenv": "^17.2.2",
-    "google-spreadsheet": "^5.0.2",
-    "googleapis": "^160.0.0",
-    "luxon": "^3.7.2",
-    "node-cron": "^4.2.1"
+    "@supabase/supabase-js": "^2.91.1",
+    "discord.js": "^14.25.1",
+    "dotenv": "^17.2.3"
   }
 }
