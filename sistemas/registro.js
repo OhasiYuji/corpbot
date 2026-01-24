@@ -6,16 +6,18 @@ const fs = require('fs');
 // ============================================================
 // ⚙️ CONFIGURAÇÃO
 // ============================================================
-const ID_CANAL_REGISTRO = '1396852912709308426'; 
+const ID_CANAL_REGISTRO = '1464432082489966703'; 
 const ID_CANAL_LOG = '1463503382449754122';      
-const ID_CARGO_MARCACAO = '1390033256703066152'; 
+const ID_CARGO_MARCACAO = '1399883634210508862'; // ID atualizado conforme seu pedido
 
-// Caminho exato da sua imagem (ajustado para funcionar relativo à pasta do bot)
-// O arquivo deve estar em: CORPBOT/assets/Banner.png
+// Caminho do Banner
 const CAMINHO_BANNER = path.join(__dirname, '../assets/Banner.png');
 
+// Emoji da Medalha
+const EMOJI_MEDALHA = '<:medalha:1407068603299139786>';
+
 // ============================================================
-// 1. FUNÇÃO DE ENVIAR O PAINEL (COM BANNER LOCAL)
+// 1. ENVIAR PAINEL
 // ============================================================
 
 async function enviarPainel(client) {
@@ -27,26 +29,25 @@ async function enviarPainel(client) {
         if (msgs.size > 0) await channel.bulkDelete(msgs).catch(() => {});
     } catch (e) {}
 
-    // Prepara o arquivo local para envio
     let arquivoBanner = null;
     if (fs.existsSync(CAMINHO_BANNER)) {
         arquivoBanner = new AttachmentBuilder(CAMINHO_BANNER, { name: 'Banner.png' });
-    } else {
-        console.log(`⚠️ AVISO: Banner não encontrado em: ${CAMINHO_BANNER}`);
     }
 
     const embed = new EmbedBuilder()
         .setAuthor({ name: 'PMMG | SISTEMA DE IDENTIFICAÇÃO', iconURL: client.user.displayAvatarURL() })
         .setDescription(`
+        **ACESSO RESTRITO**
+        
+        Para garantir a integridade das operações e o controle de efetivo, todos os oficiais devem manter seus registros atualizados no banco de dados central.
         
         > **INSTRUÇÃO:**
         > Clique no botão abaixo e insira seus dados exatamente como constam no jogo. Dados incorretos resultarão em falha na contabilização de horas.
         `)
-        .setColor(0x000000) // All Black
-        .setFooter({ text: 'P2 - SETOR DE INTELIGÊNCIA', iconURL: client.user.displayAvatarURL() })
+        .setColor(0x000000)
+        .setFooter({ text: 'Setor de Tecnologia da Informação', iconURL: client.user.displayAvatarURL() })
         .setTimestamp();
 
-    // Se a imagem existe, adiciona ela ao Embed
     if (arquivoBanner) {
         embed.setImage('attachment://Banner.png');
     }
@@ -58,14 +59,13 @@ async function enviarPainel(client) {
             .setStyle(ButtonStyle.Secondary)
     );
 
-    // Monta o pacote de envio (Embed + Arquivo)
     const pacoteEnvio = { embeds: [embed], components: [row] };
     if (arquivoBanner) {
         pacoteEnvio.files = [arquivoBanner];
     }
 
     await channel.send(pacoteEnvio);
-    console.log("✅ Painel de Registro enviado com Banner.");
+    console.log("✅ Painel de Registro enviado.");
 }
 
 // ============================================================
@@ -117,16 +117,15 @@ async function gerenciarRegistro(interaction, client) {
             console.log(`Não consegui alterar o nick de ${interaction.user.tag}.`);
         }
         
+        // --- LOG ATUALIZADO COM O VISUAL PEDIDO ---
         const logChannel = await client.channels.fetch(ID_CANAL_LOG).catch(() => null);
         if (logChannel) {
             const logMsg = 
-                `**NOVO REGISTRO EFETUADO**\n\n` +
-                `> **Oficial:** <@${interaction.user.id}>\n` +
-                `> **Nick:** ${nome}\n` +
-                `> **ID:** ${idJogo}\n` +
-                `> **Login:** ${login}\n` +
-                `> **Status:** ✅ Confirmado\n` +
-                `\n<@&${ID_CARGO_MARCACAO}>`;
+                `${EMOJI_MEDALHA} **NOME:** <@${interaction.user.id}>\n` +
+                `${EMOJI_MEDALHA} **NICKNAME:** ${nome}\n` +
+                `${EMOJI_MEDALHA} **LOGIN:** ${login}\n` +
+                `${EMOJI_MEDALHA} **ID:** ${idJogo}\n` +
+                `${EMOJI_MEDALHA} **MARCAÇÃO:** <@&${ID_CARGO_MARCACAO}>`;
             
             await logChannel.send(logMsg);
         }
