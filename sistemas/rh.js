@@ -1,14 +1,20 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, UserSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, InteractionType, EmbedBuilder } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, UserSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, InteractionType, EmbedBuilder, AttachmentBuilder } = require('discord.js');
+const path = require('path');
+const fs = require('fs');
 
-// --- CONFIGURAÇÃO (SEUS IDs) ---
+// ============================================================
+// ⚙️ CONFIGURAÇÃO
+// ============================================================
 const ID_CANAL_PAINEL = '1464432082489966703';
 const ID_LOG_ADV = '1464445657392615576';
 const ID_LOG_EXONERACAO = '1464446066823790827';
 const ID_LOG_PROMOCAO = '1463520372350783622';
 const ID_LOG_REBAIXAMENTO = '1464445999219998917';
 
-// IMPORTANTE: A ORDEM AQUI IMPORTA!
-// O primeiro da lista é o MAIOR cargo (Índice 0). O último é o MENOR.
+// Caminho do Banner
+const CAMINHO_BANNER = path.join(__dirname, '../assets/Banner.png');
+
+// IMPORTANTE: A ORDEM AQUI IMPORTA! (0 = Maior Cargo)
 const PATENTES_PARTE_1 = [
     { label: 'CMD.G', value: '1402010989884346389' },
     { label: 'CMD', value: '1390033256753135655' },
@@ -44,25 +50,78 @@ const ADVERTENCIAS = [
 const ID_CARGO_EXONERADO = '1390033256593887454';
 const ID_CARGO_MANTER = '1390033256593887447'; 
 
-// Lista Combinada para cálculo de hierarquia (Do maior para o menor)
+// Lista Combinada para cálculo de hierarquia
 const HIERARQUIA_COMPLETA = [...PATENTES_PARTE_1, ...PATENTES_PARTE_2];
 
+// ============================================================
+// 1. ENVIAR PAINEL (VISUAL TÁTICO)
+// ============================================================
 async function enviarPainel(client) {
     const channel = await client.channels.fetch(ID_CANAL_PAINEL).catch(() => null);
-    if (!channel) return;
-    const msgs = await channel.messages.fetch({ limit: 5 });
-    if (msgs.size > 0) await channel.bulkDelete(msgs).catch(()=>{});
-    const embed = new EmbedBuilder().setTitle('PAINEL DE RH').setDescription('Gerencie a hierarquia.').setColor(0x2B2D31);
-    const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('rh_btn_promover').setLabel('Promover').setStyle(ButtonStyle.Success), new ButtonBuilder().setCustomId('rh_btn_rebaixar').setLabel('Rebaixar').setStyle(ButtonStyle.Secondary), new ButtonBuilder().setCustomId('rh_btn_advertir').setLabel('Advertência').setStyle(ButtonStyle.Primary), new ButtonBuilder().setCustomId('rh_btn_exonerar').setLabel('Exonerar').setStyle(ButtonStyle.Danger));
-    await channel.send({ embeds: [embed], components: [row] });
+    if (!channel) return console.log("❌ Canal de RH não encontrado.");
+
+    try {
+        const msgs = await channel.messages.fetch({ limit: 5 });
+        if (msgs.size > 0) await channel.bulkDelete(msgs).catch(()=>{});
+    } catch(e) {}
+
+    // Prepara o Banner
+    let arquivoBanner = null;
+    if (fs.existsSync(CAMINHO_BANNER)) {
+        arquivoBanner = new AttachmentBuilder(CAMINHO_BANNER, { name: 'Banner.png' });
+    }
+
+    const embed = new EmbedBuilder()
+        .setAuthor({ name: 'BOPE | GESTÃO DE RECURSOS HUMANOS', iconURL: client.user.displayAvatarURL() })
+        .setDescription(`
+        **CONTROLE HIERÁRQUICO**
+
+        Ferramenta administrativa para gerenciamento de patenteamento e conduta dos oficiais. Todas as ações são registradas e auditadas pelo Alto Comando.
+
+        \`\`\`ml
+        STATUS: ONLINE
+        AUDITORIA: ATIVA
+        \`\`\`
+
+        > **PROCEDIMENTO:**
+        > Selecione a ação desejada abaixo. Promoções e rebaixamentos calculam automaticamente a remoção de patentes conflitantes.
+        `)
+        .setColor(0x000000) // All Black
+        .setFooter({ text: 'Diretoria de Pessoal', iconURL: client.user.displayAvatarURL() })
+        .setTimestamp();
+
+    if (arquivoBanner) {
+        embed.setImage('attachment://Banner.png');
+    }
+
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('rh_btn_promover').setLabel('PROMOVER').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('rh_btn_rebaixar').setLabel('REBAIXAR').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('rh_btn_advertir').setLabel('ADVERTÊNCIA').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('rh_btn_exonerar').setLabel('EXONERAR').setStyle(ButtonStyle.Danger)
+    );
+
+    const payload = { embeds: [embed], components: [row] };
+    if (arquivoBanner) payload.files = [arquivoBanner];
+
+    await channel.send(payload);
+    console.log("✅ Painel de RH enviado.");
 }
 
+// ============================================================
+// 2. GERENCIAMENTO DE INTERAÇÕES
+// ============================================================
 async function gerenciarRH(interaction, client) {
     // 1. CLIQUE NO BOTÃO
     if (interaction.isButton() && interaction.customId.startsWith('rh_btn_')) {
         const acao = interaction.customId.replace('rh_btn_', '');
-        const row = new ActionRowBuilder().addComponents(new UserSelectMenuBuilder().setCustomId(`rh_user_select_${acao}`).setPlaceholder('Selecione o membro...').setMaxValues(1));
-        await interaction.reply({ content: `**AÇÃO:** ${acao.toUpperCase()}`, components: [row], ephemeral: true });
+        const row = new ActionRowBuilder().addComponents(
+            new UserSelectMenuBuilder()
+                .setCustomId(`rh_user_select_${acao}`)
+                .setPlaceholder('SELECIONE O OFICIAL ALVO')
+                .setMaxValues(1)
+        );
+        await interaction.reply({ content: `**AÇÃO INICIADA:** ${acao.toUpperCase()}`, components: [row], ephemeral: true });
     }
 
     // 2. SELEÇÃO DO USUÁRIO
@@ -71,27 +130,27 @@ async function gerenciarRH(interaction, client) {
         const targetId = interaction.values[0];
         
         if (acao === 'exonerar') {
-            const modal = new ModalBuilder().setCustomId(`rh_modal_exon_${targetId}`).setTitle('Motivo');
-            modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('motivo').setLabel('Motivo').setStyle(TextInputStyle.Paragraph).setRequired(true)));
+            const modal = new ModalBuilder().setCustomId(`rh_modal_exon_${targetId}`).setTitle('Motivo da Exoneração');
+            modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('motivo').setLabel('Justificativa').setStyle(TextInputStyle.Paragraph).setRequired(true)));
             await interaction.showModal(modal);
             return;
         }
         if (acao === 'advertir') {
-            const rowAdv = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId(`rh_pre_advertir_${targetId}`).setPlaceholder('Nível da Advertência').addOptions(ADVERTENCIAS));
-            await interaction.update({ content: `**ADVERTIR** <@${targetId}>`, components: [rowAdv] });
+            const rowAdv = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId(`rh_pre_advertir_${targetId}`).setPlaceholder('Selecione o Grau da Advertência').addOptions(ADVERTENCIAS));
+            await interaction.update({ content: `**ADVERTIR OFICIAL:** <@${targetId}>`, components: [rowAdv] });
             return;
         }
         if (acao === 'promover' || acao === 'rebaixar') {
-            const row1 = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId(`rh_pre_cargo_${acao}_${targetId}_p1`).setPlaceholder('Patentes Altas').addOptions(PATENTES_PARTE_1));
-            const row2 = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId(`rh_pre_cargo_${acao}_${targetId}_p2`).setPlaceholder('Patentes Baixas').addOptions(PATENTES_PARTE_2));
-            await interaction.update({ content: `**${acao.toUpperCase()}** <@${targetId}>\nEscolha o NOVO cargo:`, components: [row1, row2] });
+            const row1 = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId(`rh_pre_cargo_${acao}_${targetId}_p1`).setPlaceholder('Oficiais Superiores / Intermediários').addOptions(PATENTES_PARTE_1));
+            const row2 = new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId(`rh_pre_cargo_${acao}_${targetId}_p2`).setPlaceholder('Praças / Graduados').addOptions(PATENTES_PARTE_2));
+            await interaction.update({ content: `**${acao.toUpperCase()}:** <@${targetId}>\nSelecione a **NOVA** patente:`, components: [row1, row2] });
         }
     }
 
     // 3. SELEÇÃO DO CARGO (Abre Modal)
     if (interaction.isStringSelectMenu()) {
         if (interaction.customId.startsWith('rh_pre_cargo_')) {
-            const parts = interaction.customId.split('_'); // rh, pre, cargo, acao, targetId, p1/p2
+            const parts = interaction.customId.split('_'); 
             const acao = parts[3];
             const targetId = parts[4];
             const novoCargoId = interaction.values[0];
@@ -100,7 +159,7 @@ async function gerenciarRH(interaction, client) {
                 .setCustomId(`rh_modal_cargo_${acao}_${targetId}_${novoCargoId}`)
                 .setTitle(`Motivo da ${acao === 'promover' ? 'Promoção' : 'Rebaixamento'}`);
 
-            const inputMotivo = new TextInputBuilder().setCustomId('motivo').setLabel('Motivo').setStyle(TextInputStyle.Paragraph).setRequired(true);
+            const inputMotivo = new TextInputBuilder().setCustomId('motivo').setLabel('Justificativa').setStyle(TextInputStyle.Paragraph).setRequired(true);
             modal.addComponents(new ActionRowBuilder().addComponents(inputMotivo));
             await interaction.showModal(modal);
         }
@@ -108,8 +167,11 @@ async function gerenciarRH(interaction, client) {
         if (interaction.customId.startsWith('rh_pre_advertir_')) {
             const targetId = interaction.customId.split('_')[3];
             const roleId = interaction.values[0];
-            const modal = new ModalBuilder().setCustomId(`rh_modal_adv_${targetId}_${roleId}`).setTitle('Detalhes');
-            modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('motivo').setLabel('Motivo').setStyle(TextInputStyle.Paragraph).setRequired(true)), new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('tempo').setLabel('Tempo').setStyle(TextInputStyle.Short).setRequired(true)));
+            const modal = new ModalBuilder().setCustomId(`rh_modal_adv_${targetId}_${roleId}`).setTitle('Detalhes da Punição');
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('motivo').setLabel('Motivo').setStyle(TextInputStyle.Paragraph).setRequired(true)), 
+                new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('tempo').setLabel('Tempo (Ex: 24h)').setStyle(TextInputStyle.Short).setRequired(true))
+            );
             await interaction.showModal(modal);
         }
     }
@@ -126,8 +188,8 @@ async function gerenciarRH(interaction, client) {
             const member = await interaction.guild.members.fetch(targetId).catch(() => null);
             if (member) await member.roles.add(roleId).catch(()=>{});
             const log = await client.channels.fetch(ID_LOG_ADV);
-            if (log) log.send(`**RELATORIO DE ADVERTENCIA**\n\n**Membro:** <@${targetId}>\n**Aplicado por:** <@${interaction.user.id}>\n**Tipo:** <@&${roleId}>\n**Motivo:** ${motivo}\n**Tempo:** ${tempo}`);
-            await interaction.editReply('✅ Advertido.');
+            if (log) log.send(`**RELATORIO DE ADVERTENCIA**\n\n**Oficial:** <@${targetId}>\n**Aplicado por:** <@${interaction.user.id}>\n**Sanção:** <@&${roleId}>\n**Motivo:** ${motivo}\n**Duração:** ${tempo}`);
+            await interaction.editReply('✅ Punição aplicada e registrada.');
         }
         
         // --- EXONERAÇÃO ---
@@ -140,74 +202,53 @@ async function gerenciarRH(interaction, client) {
                 try { await member.roles.set([ID_CARGO_MANTER, ID_CARGO_EXONERADO]); } catch(e){}
             }
             const log = await client.channels.fetch(ID_LOG_EXONERACAO);
-            if (log) log.send(`**RELATORIO DE EXONERACAO**\n\n**Exonerado:** <@${targetId}>\n**Responsavel:** <@${interaction.user.id}>\n**Motivo:** ${motivo}`);
-            await interaction.editReply('🚫 Exonerado.');
+            if (log) log.send(`**RELATORIO DE EXONERACAO**\n\n**Ex-Oficial:** <@${targetId}>\n**Responsavel:** <@${interaction.user.id}>\n**Justificativa:** ${motivo}`);
+            await interaction.editReply('🚫 Exoneração concluída.');
         }
 
         // --- PROMOÇÃO / REBAIXAMENTO COM LÓGICA HIERÁRQUICA ---
         if (interaction.customId.startsWith('rh_modal_cargo_')) {
             await interaction.deferReply({ ephemeral: true });
             const parts = interaction.customId.split('_'); 
-            const acao = parts[3]; // 'promover' ou 'rebaixar'
+            const acao = parts[3]; 
             const targetId = parts[4];
             const novoCargoId = parts[5];
             const motivo = interaction.fields.getTextInputValue('motivo');
 
             const member = await interaction.guild.members.fetch(targetId).catch(() => null);
-            
-            // Descobre o ÍNDICE (Ranking) do novo cargo
-            // Ex: Coronel = Index 5, Cabo = Index 15
-            // Quanto MENOR o número, MAIOR a patente.
             const indexNovoCargo = HIERARQUIA_COMPLETA.findIndex(p => p.value === novoCargoId);
-
             let cargosRemovidosLog = "Nenhum";
 
             if (member && indexNovoCargo !== -1) {
-                // Filtra os cargos que o usuário tem e que estão na nossa lista de patentes
                 const cargosParaRemover = member.roles.cache.filter(role => {
                     const indexCargoAtual = HIERARQUIA_COMPLETA.findIndex(p => p.value === role.id);
-                    
-                    // Se o cargo do usuário não está na nossa lista, ignora (não remove)
                     if (indexCargoAtual === -1) return false;
-
-                    // LÓGICA DE PROMOÇÃO (UPAMENTO)
-                    // Remove apenas se o cargo atual for MENOR (Index Maior) que o novo.
-                    // Ex: Novo=Capitão(8). Atual=Cabo(15). 15 > 8 -> Remove Cabo.
-                    if (acao === 'promover') {
-                        return indexCargoAtual > indexNovoCargo;
-                    }
-
-                    // LÓGICA DE REBAIXAMENTO
-                    // Remove apenas se o cargo atual for MAIOR (Index Menor) que o novo.
-                    // Ex: Novo=Cabo(15). Atual=Capitão(8). 8 < 15 -> Remove Capitão.
-                    if (acao === 'rebaixar') {
-                        return indexCargoAtual < indexNovoCargo;
-                    }
-
+                    
+                    // Lógica de Hierarquia
+                    if (acao === 'promover') return indexCargoAtual > indexNovoCargo; // Remove inferiores
+                    if (acao === 'rebaixar') return indexCargoAtual < indexNovoCargo; // Remove superiores
                     return false;
                 });
 
-                // Executa a remoção e adição
                 if (cargosParaRemover.size > 0) {
                     cargosRemovidosLog = cargosParaRemover.map(r => `<@&${r.id}>`).join(', ');
-                    await member.roles.remove(cargosParaRemover).catch(() => console.log("Erro ao remover cargo antigo"));
+                    await member.roles.remove(cargosParaRemover).catch(() => console.log("Erro ao remover patente antiga"));
                 }
-                await member.roles.add(novoCargoId).catch(() => console.log("Erro ao add novo cargo"));
+                await member.roles.add(novoCargoId).catch(() => console.log("Erro ao add nova patente"));
             }
 
-            // Log
             const log = await client.channels.fetch(acao === 'promover' ? ID_LOG_PROMOCAO : ID_LOG_REBAIXAMENTO);
             if (log) {
                 log.send(
                     `**RELATORIO DE ${acao.toUpperCase()}**\n\n` +
-                    `**Membro:** <@${targetId}>\n` +
+                    `**Oficial:** <@${targetId}>\n` +
                     `**Responsavel:** <@${interaction.user.id}>\n` +
-                    `**Cargo(s) Removido(s):** ${cargosRemovidosLog}\n` +
-                    `**Novo Cargo:** <@&${novoCargoId}>\n` +
-                    `**Motivo:** ${motivo}`
+                    `**Patente(s) Removida(s):** ${cargosRemovidosLog}\n` +
+                    `**Nova Patente:** <@&${novoCargoId}>\n` +
+                    `**Justificativa:** ${motivo}`
                 );
             }
-            await interaction.editReply(`✅ ${acao === 'promover' ? 'Promovido' : 'Rebaixado'} com sucesso.`);
+            await interaction.editReply(`✅ Alteração de patente (${acao}) realizada com sucesso.`);
         }
     }
 }
