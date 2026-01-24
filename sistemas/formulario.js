@@ -12,7 +12,25 @@ const IDS_CARGOS_APROVADO = ['1390033256652476595', '1390033256652476596', '1390
 const ID_CANAL_REGISTRO_REF = '1396852912709308426';
 const ID_CANAL_TAG_REF = '1463503382449754122';
 
-const PERGUNTAS = ['1. Nome e Idade?', '2. ID no Jogo?', '3. Defina RP e Anti-RP.', '4. Por que quer entrar?'];
+const PERGUNTAS = [ '1º • Qual sua idade?',
+    '2º • Qual o seu id no jogo?',
+    '3º • Qual sua intenção em entrar na corporação?',
+    '4º • O que é RP e ANTI-RP?',
+    '5º • O que é RDM e VDM?',
+    '6º • O que é ter amor a vida?',
+    '7º • O que é car jacking?',
+    '8º • O que é ninja jacking?',
+    '9º • O que é DarkRP?',
+    '10º • O que são áreas verdes, neutras e vermelhas?',
+    '11º • Qual patente mínima necessária para iniciar uma patrulha?',
+    '12º • Quantos policiais são necessários para iniciar a patrulha?',
+    '13º • Quando é permitido atirar em uma perseguição?',
+    '14º • Como deve ser a conduta de abordagem?',
+    '15º • Qual o máximo de artigos que uma pessoa pode ser presa?',
+    '16º • Você pode abordar trabalhador? Se sim, quando?',
+    '17º • Quando deve ser usado o taser?',
+    '18º • Como deve ser o nome à paisana e o nome em patrulha?',
+    '19º • Pode prender morto? Se sim, quando?'];
 
 async function enviarPainel(client) {
     const channel = await client.channels.fetch(ID_CANAL_BOTAO).catch(() => null);

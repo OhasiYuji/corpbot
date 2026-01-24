@@ -38,7 +38,7 @@ async function gerenciarRegistro(interaction, client) {
         if (existe) return interaction.editReply(`⚠️ Já registrado como **${existe.nome_jogo}**.`);
 
         await supabase.from('usuarios_registrados').insert({ discord_id: interaction.user.id, nome_jogo: nome, id_jogo: idJogo, login_jogo: login });
-        try { await interaction.member.setNickname(`${nome} | ${idJogo}`); } catch (e) {}
+        try { await interaction.member.setNickname(`ᴘᴍᴍɢ • ${nome} | ${idJogo}`); } catch (e) {}
 
         const logChannel = await client.channels.fetch(ID_CANAL_LOG);
         if (logChannel) logChannel.send(`${EMOJI_COP} **NOME:** <@${interaction.user.id}>\n${EMOJI_COP} **NICK:** ${nome}\n${EMOJI_COP} **LOGIN:** ${login}\n${EMOJI_COP} **ID:** ${idJogo}\n${EMOJI_COP} **MARCAÇÃO:** <@&${ID_CARGO_MARCACAO}>`);
