@@ -112,7 +112,7 @@ async function gerenciarRegistro(interaction, client) {
         }
 
         try { 
-            await interaction.member.setNickname(`${nome} | ${idJogo}`); 
+            await interaction.member.setNickname(`ᴘᴍᴍɢ • ${nome} | ${idJogo}`); 
         } catch (e) {
             console.log(`Não consegui alterar o nick de ${interaction.user.tag}.`);
         }
