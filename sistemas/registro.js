@@ -1,52 +1,71 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, InteractionType } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, InteractionType, AttachmentBuilder } = require('discord.js');
 const supabase = require('../utils/supabase');
+const path = require('path');
+const fs = require('fs');
 
 // ============================================================
-// ⚙️ CONFIGURAÇÃO (EDITE OS IDs ABAIXO)
+// ⚙️ CONFIGURAÇÃO
 // ============================================================
-const ID_CANAL_REGISTRO = '1396852912709308426'; // Canal onde o painel será enviado
-const ID_CANAL_LOG = '1418807745510903869';      // Canal onde avisa que alguém se registrou
-const ID_CARGO_MARCACAO = '1390033256703066152'; // Cargo que será marcado no log (ex: Staff/RH)
+const ID_CANAL_REGISTRO = '1464432082489966703'; 
+const ID_CANAL_LOG = '1418807745510903869';      
+const ID_CARGO_MARCACAO = '1390033256703066152'; 
 
+// Caminho exato da sua imagem (ajustado para funcionar relativo à pasta do bot)
+// O arquivo deve estar em: CORPBOT/assets/Banner.png
 const CAMINHO_BANNER = path.join(__dirname, '../assets/Banner.png');
 
 // ============================================================
-// 1. FUNÇÃO DE ENVIAR O PAINEL (ALL BLACK / MINIMALISTA)
+// 1. FUNÇÃO DE ENVIAR O PAINEL (COM BANNER LOCAL)
 // ============================================================
 
 async function enviarPainel(client) {
     const channel = await client.channels.fetch(ID_CANAL_REGISTRO).catch(() => null);
     if (!channel) return console.log("❌ Canal de Registro não encontrado.");
 
-    // Limpa mensagens antigas para o chat ficar limpo
     try {
         const msgs = await channel.messages.fetch({ limit: 5 });
         if (msgs.size > 0) await channel.bulkDelete(msgs).catch(() => {});
     } catch (e) {}
 
+    // Prepara o arquivo local para envio
+    let arquivoBanner = null;
+    if (fs.existsSync(CAMINHO_BANNER)) {
+        arquivoBanner = new AttachmentBuilder(CAMINHO_BANNER, { name: 'Banner.png' });
+    } else {
+        console.log(`⚠️ AVISO: Banner não encontrado em: ${CAMINHO_BANNER}`);
+    }
+
     const embed = new EmbedBuilder()
         .setAuthor({ name: 'PMMG | SISTEMA DE IDENTIFICAÇÃO', iconURL: client.user.displayAvatarURL() })
-        .setDescription(`       
+        .setDescription(`
+        
         > **INSTRUÇÃO:**
         > Clique no botão abaixo e insira seus dados exatamente como constam no jogo. Dados incorretos resultarão em falha na contabilização de horas.
         `)
         .setColor(0x000000) // All Black
-        .setImage('') // Linha separadora minimalista (opcional)
         .setFooter({ text: 'Setor de Tecnologia da Informação', iconURL: client.user.displayAvatarURL() })
-        // Se a imagem existe, adiciona ela ao Embed
-        if (arquivoBanner) {
-            embed.setImage('attachment://Banner.png');
-        }
+        .setTimestamp();
+
+    // Se a imagem existe, adiciona ela ao Embed
+    if (arquivoBanner) {
+        embed.setImage('attachment://Banner.png');
+    }
 
     const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
             .setCustomId('abrir_registro')
             .setLabel('INICIAR REGISTRO')
-            .setStyle(ButtonStyle.Secondary) // Cinza (Combina com o tema Dark)
+            .setStyle(ButtonStyle.Secondary)
     );
 
-    await channel.send({ embeds: [embed], components: [row] });
-    console.log("✅ Painel de Registro enviado.");
+    // Monta o pacote de envio (Embed + Arquivo)
+    const pacoteEnvio = { embeds: [embed], components: [row] };
+    if (arquivoBanner) {
+        pacoteEnvio.files = [arquivoBanner];
+    }
+
+    await channel.send(pacoteEnvio);
+    console.log("✅ Painel de Registro enviado com Banner.");
 }
 
 // ============================================================
@@ -55,7 +74,6 @@ async function enviarPainel(client) {
 
 async function gerenciarRegistro(interaction, client) {
     
-    // --- 1. CLIQUE NO BOTÃO -> ABRE O MODAL ---
     if (interaction.isButton() && interaction.customId === 'abrir_registro') {
         const modal = new ModalBuilder().setCustomId('modal_reg').setTitle('Registro de Oficial');
         
@@ -68,7 +86,6 @@ async function gerenciarRegistro(interaction, client) {
         await interaction.showModal(modal);
     }
 
-    // --- 2. ENVIOU O MODAL -> SALVA NO BANCO ---
     if (interaction.type === InteractionType.ModalSubmit && interaction.customId === 'modal_reg') {
         await interaction.deferReply({ ephemeral: true });
         
@@ -76,14 +93,12 @@ async function gerenciarRegistro(interaction, client) {
         const idJogo = interaction.fields.getTextInputValue('id_jogo');
         const login = interaction.fields.getTextInputValue('login');
 
-        // Verifica se já existe
         const { data: existe } = await supabase.from('usuarios_registrados').select('*').eq('discord_id', interaction.user.id).single();
         
         if (existe) {
             return interaction.editReply(`⚠️ **ERRO:** Você já possui um registro ativo como **${existe.nome_jogo}**.`);
         }
 
-        // Salva no Supabase
         const { error } = await supabase.from('usuarios_registrados').insert({
             discord_id: interaction.user.id,
             nome_jogo: nome,
@@ -96,14 +111,12 @@ async function gerenciarRegistro(interaction, client) {
             return interaction.editReply("❌ Ocorreu um erro ao salvar no banco de dados.");
         }
 
-        // Tenta alterar o apelido no Discord
         try { 
             await interaction.member.setNickname(`${nome} | ${idJogo}`); 
         } catch (e) {
-            console.log(`Não consegui alterar o nick de ${interaction.user.tag} (Permissão insuficiente).`);
+            console.log(`Não consegui alterar o nick de ${interaction.user.tag}.`);
         }
         
-        // Log no Canal (Estilo Minimalista)
         const logChannel = await client.channels.fetch(ID_CANAL_LOG).catch(() => null);
         if (logChannel) {
             const logMsg = 
