@@ -10,11 +10,41 @@ const ID_CARGO_MARCACAO = '1399883634210508862';
 async function enviarPainel(client) {
     const channel = await client.channels.fetch(ID_CANAL_REGISTRO).catch(() => null);
     if (!channel) return;
-    const msgs = await channel.messages.fetch({ limit: 5 });
-    if (msgs.size > 0) await channel.bulkDelete(msgs).catch(()=>{});
 
-    const row = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('abrir_registro').setLabel('Realizar Registro').setStyle(ButtonStyle.Primary).setEmoji('📋'));
-    await channel.send({ embeds: [new EmbedBuilder().setTitle('📋 Registro Oficial').setDescription('Clique abaixo para registrar.').setColor(0x0099FF)], components: [row] });
+    // Limpa mensagens antigas
+    try {
+        const msgs = await channel.messages.fetch({ limit: 5 });
+        if (msgs.size > 0) await channel.bulkDelete(msgs).catch(() => {});
+    } catch (e) {}
+
+    const embed = new EmbedBuilder()
+        .setAuthor({ name: 'BOPE | SISTEMA DE IDENTIFICAÇÃO', iconURL: client.user.displayAvatarURL() })
+        .setDescription(`
+        **ACESSO RESTRITO**
+        
+        Para garantir a integridade das operações e o controle de efetivo, todos os oficiais devem manter seus registros atualizados no banco de dados central.
+
+        \`\`\`ml
+        STATUS: SISTEMA OPERACIONAL
+        PROTOCOLO: REGISTRO_OBRIGATORIO
+        \`\`\`
+        
+        > **INSTRUÇÃO:**
+        > Clique no botão abaixo e insira seus dados exatamente como constam no jogo. Dados incorretos resultarão em falha na contabilização de horas.
+        `)
+        .setColor(0x000000) // All Black
+        .setImage('[https://i.imgur.com/r6TbfH0.png](https://i.imgur.com/r6TbfH0.png)') // Opcional: Uma linha separadora preta/cinza fina fica muito bom aqui.
+        .setFooter({ text: 'Setor de Tecnologia da Informação', iconURL: client.user.displayAvatarURL() })
+        .setTimestamp();
+
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId('abrir_registro')
+            .setLabel('INICIAR REGISTRO')
+            .setStyle(ButtonStyle.Secondary) // Botão Cinza (Dark)
+    );
+
+    await channel.send({ embeds: [embed], components: [row] });
 }
 
 async function gerenciarRegistro(interaction, client) {
