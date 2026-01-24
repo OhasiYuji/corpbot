@@ -31,7 +31,8 @@ const PATENTES_PARTE_2 = [
     { label: '3.SGT', value: '1395984627906117647' },
     { label: 'Cabo', value: '1390033256703066153' },
     { label: 'SD.1C', value: '1390033256703066152' },
-    { label: 'SD.2C', value: '1395976974190514337' }
+    { label: 'SD.2C', value: '1395976974190514337' },
+    { label: 'AL.SD', value: '1390033256652476596' }
 ];
 
 const ADVERTENCIAS = [
