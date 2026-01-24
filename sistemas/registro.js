@@ -4,7 +4,7 @@ const supabase = require('../utils/supabase');
 // ============================================================
 // ⚙️ CONFIGURAÇÃO (EDITE OS IDs ABAIXO)
 // ============================================================
-const ID_CANAL_REGISTRO = '1464432082489966703'; // Canal onde o painel será enviado
+const ID_CANAL_REGISTRO = '1396852912709308426'; // Canal onde o painel será enviado
 const ID_CANAL_LOG = '1418807745510903869';      // Canal onde avisa que alguém se registrou
 const ID_CARGO_MARCACAO = '1390033256703066152'; // Cargo que será marcado no log (ex: Staff/RH)
 
