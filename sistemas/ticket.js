@@ -31,7 +31,7 @@ async function enviarPainel(client) {
     }
 
     const embed = new EmbedBuilder()
-        .setAuthor({ name: 'BOPE | CENTRAL DE SUPORTE', iconURL: client.user.displayAvatarURL() })
+        .setAuthor({ name: 'PMMG | CENTRAL DE SUPORTE', iconURL: client.user.displayAvatarURL() })
         .setDescription(`
         **CANAL DE ATENDIMENTO OFICIAL**
 
@@ -39,8 +39,7 @@ async function enviarPainel(client) {
 
         \`\`\`ml
         STATUS: OPERACIONAL
-        EQUIPE: DISPONIVEL
-        \`\`\`
+        EQUIPE: DISPONIVEL\`\`\`
 
         > **CATEGORIAS:**
         > Selecione abaixo a opção correspondente à sua necessidade.
