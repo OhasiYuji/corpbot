@@ -8,6 +8,8 @@ const ID_CANAL_REGISTRO = '1396852912709308426'; // Canal onde o painel será en
 const ID_CANAL_LOG = '1418807745510903869';      // Canal onde avisa que alguém se registrou
 const ID_CARGO_MARCACAO = '1390033256703066152'; // Cargo que será marcado no log (ex: Staff/RH)
 
+const CAMINHO_BANNER = path.join(__dirname, '../assets/Banner.png');
+
 // ============================================================
 // 1. FUNÇÃO DE ENVIAR O PAINEL (ALL BLACK / MINIMALISTA)
 // ============================================================
@@ -23,24 +25,18 @@ async function enviarPainel(client) {
     } catch (e) {}
 
     const embed = new EmbedBuilder()
-        .setAuthor({ name: 'BOPE | SISTEMA DE IDENTIFICAÇÃO', iconURL: client.user.displayAvatarURL() })
-        .setDescription(`
-        **ACESSO RESTRITO**
-        
-        Para garantir a integridade das operações e o controle de efetivo, todos os oficiais devem manter seus registros atualizados no banco de dados central.
-
-        \`\`\`ml
-        STATUS: SISTEMA OPERACIONAL
-        PROTOCOLO: REGISTRO_OBRIGATORIO
-        \`\`\`
-        
+        .setAuthor({ name: 'PMMG | SISTEMA DE IDENTIFICAÇÃO', iconURL: client.user.displayAvatarURL() })
+        .setDescription(`       
         > **INSTRUÇÃO:**
         > Clique no botão abaixo e insira seus dados exatamente como constam no jogo. Dados incorretos resultarão em falha na contabilização de horas.
         `)
         .setColor(0x000000) // All Black
-        .setImage('https://i.imgur.com/r6TbfH0.png') // Linha separadora minimalista (opcional)
+        .setImage('') // Linha separadora minimalista (opcional)
         .setFooter({ text: 'Setor de Tecnologia da Informação', iconURL: client.user.displayAvatarURL() })
-        .setTimestamp();
+        // Se a imagem existe, adiciona ela ao Embed
+        if (arquivoBanner) {
+            embed.setImage('attachment://Banner.png');
+        }
 
     const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
