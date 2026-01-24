@@ -60,7 +60,7 @@ async function enviarPainel(client) {
     }
 
     const embed = new EmbedBuilder()
-        .setAuthor({ name: 'BOPE | ALISTAMENTO MILITAR', iconURL: client.user.displayAvatarURL() })
+        .setAuthor({ name: 'PMMG | ALISTAMENTO MILITAR', iconURL: client.user.displayAvatarURL() })
         .setDescription(`
         **PROCESSO SELETIVO UNIFICADO**
 
@@ -68,8 +68,7 @@ async function enviarPainel(client) {
 
         \`\`\`ml
         STATUS: INSCRICOES_ABERTAS
-        VAGAS: DISPONIVEIS
-        \`\`\`
+        VAGAS: DISPONIVEIS\`\`\`
 
         > **ATENÇÃO:**
         > Responda todas as perguntas com clareza e honestidade. O uso de IA ou cópia de respostas resultará em indeferimento imediato.
