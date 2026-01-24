@@ -43,7 +43,7 @@ async function enviarPainel(client) {
         > Clique no botão abaixo e insira seus dados exatamente como constam no jogo. Dados incorretos resultarão em falha na contabilização de horas.
         `)
         .setColor(0x000000) // All Black
-        .setFooter({ text: 'Setor de Tecnologia da Informação', iconURL: client.user.displayAvatarURL() })
+        .setFooter({ text: 'P2 - SETOR DE INTELIGÊNCIA', iconURL: client.user.displayAvatarURL() })
         .setTimestamp();
 
     // Se a imagem existe, adiciona ela ao Embed
