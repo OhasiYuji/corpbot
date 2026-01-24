@@ -68,26 +68,63 @@ async function gerenciarFormulario(interaction, client) {
     }
 
     if (customId.startsWith('apv_') || customId.startsWith('rep_')) {
+        // 1. Verifica permissão ANTES de deferir para não bugar o botão se não tiver cargo
+        if (!interaction.member.roles.cache.has(ID_CARGO_RECRUTADOR)) {
+            return interaction.reply({ content: '❌ Você não tem permissão de Recrutador.', ephemeral: true });
+        }
+
         await interaction.deferUpdate();
-        if (!interaction.member.roles.cache.has(ID_CARGO_RECRUTADOR)) return;
+        
         const targetId = customId.split('_')[1];
         const isApproved = customId.startsWith('apv');
         const member = await guild.members.fetch(targetId).catch(() => null);
-        const canalRes = await client.channels.fetch(ID_CANAL_RESULTADO);
+        const canalRes = await client.channels.fetch(ID_CANAL_RESULTADO).catch(() => null);
 
-        if (member && isApproved) await member.roles.add(IDS_CARGOS_APROVADO).catch(()=>{});
-        if (member) member.send(isApproved ? `🎉 Aprovado!` : `❌ Reprovado.`).catch(()=>{});
+        // 2. Lógica de Aprovação com LOG DE ERRO
+        if (member && isApproved) {
+            try {
+                await member.roles.add(IDS_CARGOS_APROVADO);
+                console.log(`✅ Cargos adicionados para ${member.user.tag}`);
+            } catch (error) {
+                console.error(`❌ ERRO AO ADICIONAR CARGOS:`, error);
+                // Avisa no console o motivo provável
+                console.log("DICA: Verifique se o cargo do BOT está ACIMA dos cargos que ele tenta dar na lista de cargos do servidor.");
+            }
+        }
+
+        // Tenta enviar DM (pode falhar se o user tiver DM fechada, então usamos catch)
+        if (member) {
+            member.send(isApproved ? `🎉 Parabéns! Você foi APROVADO!` : `❌ Infelizmente você foi Reprovado.`).catch(() => console.log("Não foi possível enviar DM para o usuário (DM Fechada)."));
+        }
 
         if (canalRes) {
-            const embedPub = new EmbedBuilder().setTitle(isApproved ? '✅ Candidato Aprovado' : '❌ Candidato Reprovado').setColor(isApproved ? 0x57F287 : 0xED4245).setThumbnail(member ? member.user.displayAvatarURL() : null).setTimestamp().setFooter({text: guild.name, iconURL: guild.iconURL()});
-            let desc = `O formulário de **${member?member.user.username:'Desc.'}** (<@${targetId}>) foi processado.`;
+            const embedPub = new EmbedBuilder()
+                .setTitle(isApproved ? '✅ Candidato Aprovado' : '❌ Candidato Reprovado')
+                .setColor(isApproved ? 0x57F287 : 0xED4245)
+                .setThumbnail(member ? member.user.displayAvatarURL() : null)
+                .setTimestamp()
+                .setFooter({text: guild.name, iconURL: guild.iconURL()});
+            
+            let desc = `O formulário de **${member ? member.user.username : 'Desconhecido'}** (<@${targetId}>) foi processado.`;
+            
             if (isApproved) desc += `\n\n**PRÓXIMOS PASSOS:**\n1. Registre-se: <#${ID_CANAL_REGISTRO_REF}>\n2. Pegue a tag: <#${ID_CANAL_TAG_REF}>`;
-            else desc += `\n\n**ORIENTAÇÃO:** Leia as regras.`;
+            else desc += `\n\n**ORIENTAÇÃO:** Leia as regras e tente novamente no futuro.`;
+            
             embedPub.setDescription(desc);
-            embedPub.addFields({ name: 'Status', value: isApproved?'Aprovado':'Reprovado', inline: true }, { name: 'Recrutador', value: `${user}`, inline: true });
-            await canalRes.send({ embeds: [embedPub] });
+            embedPub.addFields(
+                { name: 'Status', value: isApproved ? 'Aprovado' : 'Reprovado', inline: true }, 
+                { name: 'Recrutador', value: `${user}`, inline: true }
+            );
+            
+            await canalRes.send({ embeds: [embedPub] }).catch(err => console.error("Erro ao enviar no canal de resultado:", err));
         }
-        const newEmbed = EmbedBuilder.from(interaction.message.embeds[0]).setTitle(isApproved ? '✅ APROVADO' : '❌ REPROVADO').setColor(isApproved ? 0x00FF00 : 0xFF0000).setFooter({ text: `Avaliado por: ${user.tag}` });
+
+        // Atualiza a mensagem original para tirar os botões
+        const newEmbed = EmbedBuilder.from(interaction.message.embeds[0])
+            .setTitle(isApproved ? '✅ APROVADO' : '❌ REPROVADO')
+            .setColor(isApproved ? 0x00FF00 : 0xFF0000)
+            .setFooter({ text: `Avaliado por: ${user.tag}`, iconURL: user.displayAvatarURL() });
+        
         await interaction.editReply({ components: [], embeds: [newEmbed] });
     }
 }
