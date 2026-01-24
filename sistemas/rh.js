@@ -72,16 +72,11 @@ async function enviarPainel(client) {
     }
 
     const embed = new EmbedBuilder()
-        .setAuthor({ name: 'BOPE | GESTÃO DE RECURSOS HUMANOS', iconURL: client.user.displayAvatarURL() })
+        .setAuthor({ name: 'PMMG | GESTÃO DE OFICIAIS', iconURL: client.user.displayAvatarURL() })
         .setDescription(`
         **CONTROLE HIERÁRQUICO**
 
         Ferramenta administrativa para gerenciamento de patenteamento e conduta dos oficiais. Todas as ações são registradas e auditadas pelo Alto Comando.
-
-        \`\`\`ml
-        STATUS: ONLINE
-        AUDITORIA: ATIVA
-        \`\`\`
 
         > **PROCEDIMENTO:**
         > Selecione a ação desejada abaixo. Promoções e rebaixamentos calculam automaticamente a remoção de patentes conflitantes.
