@@ -6,7 +6,7 @@ const fs = require('fs');
 // ============================================================
 // ⚙️ CONFIGURAÇÃO
 // ============================================================
-const ID_CANAL_REGISTRO = '1464432082489966703'; 
+const ID_CANAL_REGISTRO = '1396852912709308426'; 
 const ID_CANAL_LOG = '1463503382449754122';      
 const ID_CARGO_MARCACAO = '1399883634210508862'; // ID atualizado conforme seu pedido
 
