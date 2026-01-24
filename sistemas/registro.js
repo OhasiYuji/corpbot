@@ -7,7 +7,7 @@ const fs = require('fs');
 // ⚙️ CONFIGURAÇÃO
 // ============================================================
 const ID_CANAL_REGISTRO = '1396852912709308426'; 
-const ID_CANAL_LOG = '1418807745510903869';      
+const ID_CANAL_LOG = '1463503382449754122';      
 const ID_CARGO_MARCACAO = '1390033256703066152'; 
 
 // Caminho exato da sua imagem (ajustado para funcionar relativo à pasta do bot)
