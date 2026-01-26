@@ -181,7 +181,7 @@ async function gerenciarFormulario(interaction, client) {
 
         if (member) {
             member.send(isApproved 
-                ? `🎉 **PARABÉNS!** Você foi aprovado no recrutamento do BOPE!` 
+                ? `🎉 **PARABÉNS!** Você foi aprovado no recrutamento da Policia Militar De Minas Gerais!` 
                 : `❌ **REPROVADO.** Infelizmente você não atingiu os critérios necessários.`
             ).catch(() => {});
         }
