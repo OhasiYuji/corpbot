@@ -7,8 +7,7 @@ const sysPonto = require('./sistemas/ponto');
 const sysGestao = require('./sistemas/gestao');
 const sysRH = require('./sistemas/rh');
 const sysTicket = require('./sistemas/ticket');
-const gestaoApelidos = require('./sistemas/gestao_apelidos.js');
-gestaoApelidos(client);
+
 
 const client = new Client({
     intents: [
@@ -47,6 +46,7 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
     await sysPonto.gerenciarPonto(oldState, newState, client);
 });
 
-
+const gestaoApelidos = require('./sistemas/gestao_apelidos.js');
+gestaoApelidos(client);
 
 client.login(process.env.DISCORD_TOKEN);
