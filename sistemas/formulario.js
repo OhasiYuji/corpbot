@@ -60,7 +60,7 @@ async function enviarPainel(client) {
     }
 
     const embed = new EmbedBuilder()
-        .setAuthor({ name: 'PMMG | ALISTAMENTO MILITAR', iconURL: client.user.displayAvatarURL() })
+        .setAuthor({ name: 'POLICIA FEDERAL | EDITAL ALUNO', iconURL: client.user.displayAvatarURL() })
         .setDescription(`
         **PROCESSO SELETIVO UNIFICADO**
 
@@ -181,7 +181,7 @@ async function gerenciarFormulario(interaction, client) {
 
         if (member) {
             member.send(isApproved 
-                ? `🎉 **PARABÉNS!** Você foi aprovado no recrutamento da Policia Militar De Minas Gerais!` 
+                ? `🎉 **PARABÉNS!** Você foi aprovado no recrutamento da Policia Federal!` 
                 : `❌ **REPROVADO.** Infelizmente você não atingiu os critérios necessários.`
             ).catch(() => {});
         }

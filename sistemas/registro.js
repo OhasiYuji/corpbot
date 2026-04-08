@@ -35,7 +35,7 @@ async function enviarPainel(client) {
     }
 
     const embed = new EmbedBuilder()
-        .setAuthor({ name: 'PMMG | SISTEMA DE IDENTIFICAÇÃO', iconURL: client.user.displayAvatarURL() })
+        .setAuthor({ name: 'Polícia Federal | SISTEMA DE IDENTIFICAÇÃO', iconURL: client.user.displayAvatarURL() })
         .setDescription(`
         **ACESSO RESTRITO**
         
@@ -112,7 +112,7 @@ async function gerenciarRegistro(interaction, client) {
         }
 
         try { 
-            await interaction.member.setNickname(`ᴘᴍᴍɢ • ${nome} | ${idJogo}`); 
+            await interaction.member.setNickname(`PF • ${nome} 「${idJogo}」`); 
         } catch (e) {
             console.log(`Não consegui alterar o nick de ${interaction.user.tag}.`);
         }

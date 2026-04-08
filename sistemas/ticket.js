@@ -31,7 +31,7 @@ async function enviarPainel(client) {
     }
 
     const embed = new EmbedBuilder()
-        .setAuthor({ name: 'PMMG | CENTRAL DE SUPORTE', iconURL: client.user.displayAvatarURL() })
+        .setAuthor({ name: 'POLICIA FEDERAL | CENTRAL DE SUPORTE', iconURL: client.user.displayAvatarURL() })
         .setDescription(`
         **CANAL DE ATENDIMENTO OFICIAL**
 

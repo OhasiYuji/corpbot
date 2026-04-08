@@ -72,7 +72,7 @@ async function enviarPainel(client) {
     }
 
     const embed = new EmbedBuilder()
-        .setAuthor({ name: 'PMMG | GESTÃO DE OFICIAIS', iconURL: client.user.displayAvatarURL() })
+        .setAuthor({ name: 'POLICIA FEDERAL | GESTÃO DE OFICIAIS', iconURL: client.user.displayAvatarURL() })
         .setDescription(`
         **CONTROLE HIERÁRQUICO**
 

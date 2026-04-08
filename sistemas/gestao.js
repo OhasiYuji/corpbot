@@ -31,7 +31,7 @@ async function enviarPainel(client) {
     }
 
     const embed = new EmbedBuilder()
-        .setAuthor({ name: 'PMMG | GESTÃO DE EFETIVO', iconURL: client.user.displayAvatarURL() })
+        .setAuthor({ name: 'POLICIA FEDERAL | GESTÃO DE EFETIVO', iconURL: client.user.displayAvatarURL() })
         .setDescription(`
         **CENTRAL DE CONTROLE DE PONTO**
 
