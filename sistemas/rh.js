@@ -16,29 +16,28 @@ const CAMINHO_BANNER = path.join(__dirname, '../assets/Banner.png');
 
 // IMPORTANTE: A ORDEM AQUI IMPORTA! (0 = Maior Cargo)
 const PATENTES_PARTE_1 = [
-    { label: 'CMD.G', value: '1402010989884346389' },
-    { label: 'CMD', value: '1390033256753135655' },
-    { label: 'S.CMD', value: '1390033256753135654' },
-    { label: 'CH-EM', value: '1455022206827364352' },
-    { label: 'CMD.P', value: '1395980542276796504' },
-    { label: 'Coronel', value: '1395986975814582364' },
-    { label: 'Ten-Cel', value: '1395986831941566627' },
-    { label: 'Major', value: '1390033256753135647' },
-    { label: 'Capitao', value: '1390033256727974059' },
-    { label: '1.Ten', value: '1390033256727974058' },
-    { label: '2.Ten', value: '1463234639257931846' }
+    { label: 'DRT.G', value: '1402010989884346389' },
+    { label: 'DRT', value: '1390033256753135655' },
+    { label: 'S.DRT', value: '1390033256753135654' },
+    { label: 'SPTD', value: '1455022206827364352' },
+    { label: 'COORD.G', value: '1395986975814582364' },
+    { label: 'COORD', value: '1395986831941566627' },
+    { label: 'DLG.G', value: '1390033256753135647' },
+    { label: 'DLG', value: '1390033256727974059' },
+    { label: 'DLG.A', value: '1390033256727974058' },
+    { label: 'SPV', value: '1466854480174645299' }
 ];
 
 const PATENTES_PARTE_2 = [
-    { label: 'Aspirante', value: '1463241851321454683' },
-    { label: 'Subtenente', value: '1390033256703066159' },
-    { label: '1.SGT', value: '1390033256703066158' },
-    { label: '2.SGT', value: '1390033256703066157' },
-    { label: '3.SGT', value: '1395984627906117647' },
-    { label: 'Cabo', value: '1390033256703066153' },
-    { label: 'SD.1C', value: '1390033256703066152' },
-    { label: 'SD.2C', value: '1395976974190514337' },
-    { label: 'AL.SD', value: '1390033256652476596' }
+    { label: 'INV.C', value: '1463241851321454683' },
+    { label: 'INV', value: '1390033256703066159' },
+    { label: 'INSP', value: '1390033256703066158' },
+    { label: 'AGT.E', value: '1390033256703066157' },
+    { label: 'AGT.O', value: '1395984627906117647' },
+    { label: 'AGT.1C', value: '1390033256703066153' },
+    { label: 'AGT.2C', value: '1390033256703066152' },
+    { label: 'AGT.3C', value: '1395976974190514337' },
+    { label: 'ALN', value: '1488702571332767834' }
 ];
 
 const ADVERTENCIAS = [
