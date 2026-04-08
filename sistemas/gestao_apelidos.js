@@ -2,42 +2,59 @@ const { PermissionFlagsBits } = require('discord.js');
 
 module.exports = (client) => {
     client.on('messageCreate', async (message) => {
-        // Ignora bots e mensagens fora de servidor
         if (message.author.bot || !message.guild) return;
 
-        // Comando: !resetarapelidos
         if (message.content === '!resetarapelidos') {
             
-            // Trava de segurança: Só quem tem o cargo de Founder ou Administrator
-            // Você pode trocar pelo ID do cargo de Founder se preferir
+            // Verifica permissão (Admin ou cargo Founder)
             if (!message.member.permissions.has(PermissionFlagsBits.Administrator)) {
-                return message.reply('❌ Apenas a alta cúpula (Founder/Admin) pode usar este comando.');
+                return message.reply('❌ Apenas a alta cúpula pode usar este comando.');
             }
 
             try {
+                // Força a atualização da lista de membros
                 const members = await message.guild.members.fetch();
-                let count = 0;
-                let erroHierarquia = 0;
+                const totalComApelido = members.filter(m => m.nickname).size;
+                
+                if (totalComApelido === 0) {
+                    return message.reply('✅ Todos os membros já estão com os nomes limpos!');
+                }
 
-                const msgStatus = await message.channel.send('⏳ Iniciando varredura e limpeza de apelidos...');
+                let processados = 0;
+                let erros = 0;
+                
+                const msgStatus = await message.channel.send(`⏳ **Iniciando Faxina...**\n[░░░░░░░░░░] 0% (0/${totalComApelido})`);
 
                 for (const [id, member] of members) {
-                    // Só tenta mudar se o membro TIVER apelido e se o bot TIVER poder sobre ele
                     if (member.nickname) {
                         if (member.manageable) {
-                            await member.setNickname(null);
-                            count++;
+                            try {
+                                await member.setNickname(null);
+                                processados++;
+                            } catch (e) {
+                                erros++;
+                            }
                         } else {
-                            erroHierarquia++;
+                            erros++;
+                        }
+
+                        // Atualiza a barra a cada 5 membros para não dar lag no bot
+                        if (processados % 5 === 0 || processados === totalComApelido) {
+                            const progresso = Math.floor((processados / totalComApelido) * 10);
+                            const barra = '▓'.repeat(progresso) + '░'.repeat(10 - progresso);
+                            const porcentagem = Math.floor((processados / totalComApelido) * 100);
+                            
+                            await msgStatus.edit(`⏳ **Limpando apelidos...**\n[${barra}] ${porcentagem}% (${processados}/${totalComApelido})`)
+                                .catch(() => {}); // Evita erro se a mensagem for apagada
                         }
                     }
                 }
 
-                await msgStatus.edit(`✅ **Limpeza concluída!**\n👤 Apelidos removidos: \`${count}\` \n⚠️ Membros imunes (hierarquia alta): \`${erroHierarquia}\``);
+                await msgStatus.edit(`✅ **Faxina Geral Concluída!**\n\n👤 Nomes resetados: \`${processados}\`\n⚠️ Imunes/Erros: \`${erros}\`\n\n*Todos os membros agora estão com o nome original do Discord.*`);
 
             } catch (error) {
-                console.error('Erro ao resetar apelidos:', error);
-                message.reply('🔴 Ocorreu um erro interno ao tentar buscar os membros.');
+                console.error('Erro na automação de apelidos:', error);
+                message.reply('🔴 Erro crítico ao tentar buscar membros ou editar apelidos.');
             }
         }
     });
