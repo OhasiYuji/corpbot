@@ -186,18 +186,36 @@ async function gerenciarRH(interaction, client) {
             await interaction.editReply('✅ Punição aplicada e registrada.');
         }
         
+// ATENÇÃO: Certifique-se de importar o supabase no topo deste arquivo!
+// const supabase = require('../utils/supabase.js');
+
         // --- EXONERAÇÃO ---
         if (interaction.customId.startsWith('rh_modal_exon_')) {
             await interaction.deferReply({ ephemeral: true });
             const targetId = interaction.customId.split('_')[3];
             const motivo = interaction.fields.getTextInputValue('motivo');
             const member = await interaction.guild.members.fetch(targetId).catch(() => null);
+            
             if (member) {
                 try { await member.roles.set([ID_CARGO_MANTER, ID_CARGO_EXONERADO]); } catch(e){}
             }
+
+            // 🔴 [NOVO] Removendo o registro do banco de dados (Supabase)
+            try {
+                const { error } = await supabase
+                    .from('nome_da_sua_tabela') // ⚠️ MUDE PARA O NOME DA SUA TABELA (ex: 'registros')
+                    .delete()
+                    .eq('discord_id', targetId); // ⚠️ MUDE PARA O NOME DA COLUNA QUE SALVA O ID
+
+                if (error) console.error('Erro ao deletar do banco na exoneração:', error);
+            } catch (err) {
+                console.error('Erro de conexão com o Supabase:', err);
+            }
+
             const log = await client.channels.fetch(ID_LOG_EXONERACAO);
-            if (log) log.send(`**RELATORIO DE EXONERACAO**\n\n**Ex-Oficial:** <@${targetId}>\n**Responsavel:** <@${interaction.user.id}>\n**Justificativa:** ${motivo}`);
-            await interaction.editReply('🚫 Exoneração concluída.');
+            if (log) log.send(`**RELATORIO DE EXONERACAO**\n\n**Ex-Agente:** <@${targetId}>\n**Responsavel:** <@${interaction.user.id}>\n**Justificativa:** ${motivo}`);
+            
+            await interaction.editReply('🚫 Exoneração concluída e registro apagado do sistema.');
         }
 
         // --- PROMOÇÃO / REBAIXAMENTO COM LÓGICA HIERÁRQUICA ---

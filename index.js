@@ -1,20 +1,24 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 
+// [NOVO] Importando a conexão com o banco de dados
+const supabase = require('./utils/supabase.js'); 
+
 const sysForm = require('./sistemas/formulario');
 const sysReg = require('./sistemas/registro');
 const sysPonto = require('./sistemas/ponto');
 const sysGestao = require('./sistemas/gestao');
 const sysRH = require('./sistemas/rh');
 const sysTicket = require('./sistemas/ticket');
-
+// Aproveitei para organizar os imports e subi o de apelidos pra cá
+const gestaoApelidos = require('./sistemas/gestao_apelidos.js'); 
 
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMembers, // Essa intent é a que permite o bot ver quem entra e sai!
         GatewayIntentBits.GuildVoiceStates
     ]
 });
@@ -46,7 +50,29 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
     await sysPonto.gerenciarPonto(oldState, newState, client);
 });
 
-const gestaoApelidos = require('./sistemas/gestao_apelidos.js');
+// --- [NOVO] EVENTO: QUANDO ALGUÉM SAI DO SERVIDOR ---
+client.on('guildMemberRemove', async (member) => {
+    try {
+        const { data, error } = await supabase
+            .from('sua_tabela_de_registros') // ⚠️ ALTERE PARA O NOME DA SUA TABELA
+            .delete()
+            .eq('discord_id', member.id) // ⚠️ ALTERE PARA O NOME DA SUA COLUNA DO ID
+            .select();
+
+        // Se encontrou e deletou alguém, avisa no console (e no canal, se quiser)
+        if (data && data.length > 0) {
+            console.log(`🗑️ Registro automático apagado: ${member.user.tag} saiu do servidor.`);
+            
+            // Opcional: Descomente as linhas abaixo se quiser que o bot avise no chat
+            // const canalLog = await member.guild.channels.fetch('ID_DO_CANAL_AQUI').catch(()=>null);
+            // if (canalLog) canalLog.send(`⚠️ O ex-agente **${member.user.tag}** saiu da cidade. Registro removido do sistema.`);
+        }
+    } catch (err) {
+        console.error('Erro ao deletar membro que saiu do servidor:', err);
+    }
+});
+// ---------------------------------------------------
+
 gestaoApelidos(client);
 
 client.login(process.env.DISCORD_TOKEN);
